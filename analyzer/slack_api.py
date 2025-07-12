@@ -1,20 +1,25 @@
 import requests
-import sys
 
-def fetch_slack_messages(channel_id: str, bot_token: str, oldest: int, latest: int) -> list:
+class SlackAPIError(Exception):
+    pass
+
+def fetch_slack_messages(channel_id: str, bot_token: str, oldest: int, latest: int, limit: int = 1000):
     """
-    Fetch messages from Slack API conversation history endpoint.
-
+    Fetch messages from a Slack channel within a time window.
+    
     Args:
         channel_id (str): Slack channel ID.
-        bot_token (str): Slack Bot OAuth token.
-        oldest (int): Unix timestamp of the start time.
-        latest (int): Unix timestamp of the end time.
-
+        bot_token (str): Slack bot token.
+        oldest (int): Unix timestamp for oldest message.
+        latest (int): Unix timestamp for latest message.
+        limit (int): Max number of messages to fetch (default 1000).
+    
     Returns:
-        list: List of Slack messages dicts.
-
-    Exits program if error occurs.
+        List[dict]: List of Slack messages.
+    
+    Raises:
+        SlackAPIError: If Slack API returns error.
+        requests.exceptions.RequestException: For HTTP/network issues.
     """
     url = "https://slack.com/api/conversations.history"
     headers = {
@@ -25,20 +30,18 @@ def fetch_slack_messages(channel_id: str, bot_token: str, oldest: int, latest: i
         "channel": channel_id,
         "oldest": oldest,
         "latest": latest,
-        "limit": 1000,
+        "limit": limit
     }
 
     try:
         response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
-        data = response.json()
-
-        if not data.get("ok"):
-            print(f"Slack API Error: {data.get('error', 'Unknown error')}")
-            sys.exit(1)
-
-        return data.get("messages", [])
-
     except requests.exceptions.RequestException as e:
-        print(f"Request Error: {e}")
-        sys.exit(1)
+        # Log or re-raise with context
+        raise e
+
+    data = response.json()
+    if not data.get("ok", False):
+        raise SlackAPIError(f"Slack API error: {data.get('error', 'Unknown error')}")
+    
+    return data.get("messages", [])
