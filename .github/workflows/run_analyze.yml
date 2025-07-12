@@ -41,3 +41,9 @@ jobs:
           SLACK_CHANNEL_INTEROP: ${{ secrets.SLACK_CHANNEL_INTEROP }}
         run: |
           python3 -m scripts.analyze ${{ github.event.inputs.date }} ${{ github.event.inputs.mode }}
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alarm-report-${{ inputs.mode }}-${{ inputs.date }}
+          path: reports/alarm_report_${{ inputs.mode }}_${{ inputs.date }}.html
