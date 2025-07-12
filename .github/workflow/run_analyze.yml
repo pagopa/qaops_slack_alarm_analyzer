@@ -1,0 +1,43 @@
+name: Manual slack alarm analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date to analyze (dd-mm-yy)'
+        required: true
+        default: '24-06-25'
+      mode:
+        description: 'Mode: SEND or INTEROP'
+        required: true
+        default: 'SEND'
+        type: choice
+        options:
+          - SEND
+          - INTEROP
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Slack alarm analyzer
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CHANNEL_SEND: ${{ secrets.SLACK_CHANNEL_SEND }}
+          SLACK_CHANNEL_INTEROP: ${{ secrets.SLACK_CHANNEL_INTEROP }}
+        run: |
+          python3 -m scripts.analyze ${{ github.event.inputs.date }} ${{ github.event.inputs.mode }}
