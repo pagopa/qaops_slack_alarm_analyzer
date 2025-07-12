@@ -3,6 +3,7 @@ import os
 import sys
 from analyzer.slack_api import fetch_slack_messages, SlackAPIError
 from analyzer.alarm_parser import analyze_alarms, display_alarm_statistics, parse_date
+from analyzer.report import generate_html_report
 
 def main():
     if len(sys.argv) != 3:
@@ -27,7 +28,7 @@ def main():
         sys.exit(1)
 
     print(bot_token)
-    
+
     channel_env_var = 'SLACK_CHANNEL_SEND' if mode == 'SEND' else 'SLACK_CHANNEL_INTEROP'
     channel_id = os.getenv(channel_env_var)
     if not channel_id:
@@ -54,8 +55,9 @@ def main():
 
     alarm_stats, total_alarms = analyze_alarms(messages, mode)
 
-    display_alarm_statistics(alarm_stats, total_alarms, formatted_date)
-
+    #display_alarm_statistics(alarm_stats, total_alarms, formatted_date) #command line
+    report_path = generate_html_report(alarm_stats, total_alarms, date_str, mode)
+    print(f"Report generated at: {report_path}")
 
 if __name__ == "__main__":
     main()
