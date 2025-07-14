@@ -3,7 +3,7 @@ name: Daily Slack alarm report
 on:
   schedule:
     - cron: "10 7 * * *"  # Every day at 9:10 Rome (summer) / 08:10 Rome (winter)
-  workflow_dispatch:
+  workflow_dispatch:     # Allow manual trigger
 
 permissions:
   contents: read
@@ -12,7 +12,6 @@ jobs:
   daily-report:
     runs-on: ubuntu-latest
     env:
-      SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
       SLACK_CHANNEL_SEND: ${{ secrets.SLACK_CHANNEL_SEND }}
       SLACK_CHANNEL_INTEROP: ${{ secrets.SLACK_CHANNEL_INTEROP }}
       SLACK_CHANNEL_GO: ${{ secrets.SLACK_CHANNEL_GO }}
@@ -51,7 +50,7 @@ jobs:
           name: alarm-reports-${{ steps.get_date.outputs.date }}
           path: reports/
 
-      - name: Create Slack payload for SEND
+      - name: Create SEND payload
         run: |
           echo '{
             "channel": "'"${SLACK_CHANNEL_GO}"'",
@@ -63,14 +62,7 @@ jobs:
             ]
           }' > send_payload.json
 
-      - name: Notify report (SEND) on Slack
-        uses: slackapi/slack-github-action@v1.24.0
-        with:
-          payload-file-path: send_payload.json
-        env:
-          SLACK_BOT_TOKEN: ${{ env.SLACK_TOKEN }}
-
-      - name: Create Slack payload for INTEROP
+      - name: Create INTEROP payload
         run: |
           echo '{
             "channel": "'"${SLACK_CHANNEL_GO}"'",
@@ -82,9 +74,16 @@ jobs:
             ]
           }' > interop_payload.json
 
+      - name: Notify report (SEND) on Slack
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload-file-path: send_payload.json
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
+
       - name: Notify report (INTEROP) on Slack
         uses: slackapi/slack-github-action@v1.24.0
         with:
           payload-file-path: interop_payload.json
         env:
-          SLACK_BOT_TOKEN: ${{ env.SLACK_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
