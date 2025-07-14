@@ -5,6 +5,9 @@ on:
     - cron: "10 7 * * *"  # Every day at 9:10 Rome (summer) / 08:10 Rome (winter)
   workflow_dispatch:     # Allow manual trigger too
 
+permissions:
+  contents: read
+  
 jobs:
   daily-report:
     runs-on: ubuntu-latest
