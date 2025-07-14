@@ -55,7 +55,7 @@ def main():
 
     alarm_stats, total_alarms = analyze_alarms(messages, mode)
 
-    #display_alarm_statistics(alarm_stats, total_alarms, formatted_date) #command line
+    #display_alarm_statistics(alarm_stats, total_alarms, formatted_date) #command line: python3 -m scripts.analyze 13-07-25 SEND
     report_path = generate_html_report(alarm_stats, total_alarms, date_str, mode)
     print(f"Report generated at: {report_path}")
 

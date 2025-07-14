@@ -1,0 +1,48 @@
+name: Daily Slack alarm report
+
+on:
+  schedule:
+    - cron: "0 9 * * *"  # Every day at 9:00 UTC
+  workflow_dispatch:     # Allow manual trigger too
+
+jobs:
+  daily-report:
+    runs-on: ubuntu-latest
+    env:
+      SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+      SLACK_CHANNEL_SEND: ${{ secrets.SLACK_CHANNEL_SEND }}
+      SLACK_CHANNEL_INTEROP: ${{ secrets.SLACK_CHANNEL_INTEROP }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Get yesterday's date
+        id: get_date
+        run: |
+          YESTERDAY=$(date -u -d "yesterday" "+%d-%m-%y")
+          echo "date=$YESTERDAY" >> $GITHUB_OUTPUT
+
+      - name: Run analyzer for SEND
+        run: |
+          python3 -m scripts.analyze "${{ steps.get_date.outputs.date }}" SEND
+
+      - name: Run analyzer for INTEROP
+        run: |
+          python3 -m scripts.analyze "${{ steps.get_date.outputs.date }}" INTEROP
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: alarm-reports-${{ steps.get_date.outputs.date }}
+          path: reports/
