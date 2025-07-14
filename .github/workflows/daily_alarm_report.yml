@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: read
-  
+
 jobs:
   daily-report:
     runs-on: ubuntu-latest
@@ -15,6 +15,7 @@ jobs:
       SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
       SLACK_CHANNEL_SEND: ${{ secrets.SLACK_CHANNEL_SEND }}
       SLACK_CHANNEL_INTEROP: ${{ secrets.SLACK_CHANNEL_INTEROP }}
+      SLACK_CHANNEL_GO: ${{ secrets.SLACK_CHANNEL_GO }}
 
     steps:
       - name: Checkout repo
@@ -49,3 +50,19 @@ jobs:
         with:
           name: alarm-reports-${{ steps.get_date.outputs.date }}
           path: reports/
+
+      - name: Send SEND report to Slack
+        run: |
+          curl -F file=@reports/alarm_report_SEND_${{ steps.get_date.outputs.date }}.html \
+               -F "initial_comment=Daily alarm report (SEND) for ${{ steps.get_date.outputs.date }}" \
+               -F channels=$SLACK_CHANNEL_GO \
+               -H "Authorization: Bearer $SLACK_TOKEN" \
+               https://slack.com/api/files.upload
+
+      - name: Send INTEROP report to Slack
+        run: |
+          curl -F file=@reports/alarm_report_INTEROP_${{ steps.get_date.outputs.date }}.html \
+               -F "initial_comment=Daily alarm report (INTEROP) for ${{ steps.get_date.outputs.date }}" \
+               -F channels=$SLACK_CHANNEL_GO \
+               -H "Authorization: Bearer $SLACK_TOKEN" \
+               https://slack.com/api/files.upload
