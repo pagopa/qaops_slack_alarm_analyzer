@@ -53,16 +53,16 @@ jobs:
 
       - name: Send SEND report to Slack
         run: |
-          curl -F file=@reports/alarm_report_SEND_${{ steps.get_date.outputs.date }}.html \
-               -F "initial_comment=Daily alarm report (SEND) for ${{ steps.get_date.outputs.date }}" \
-               -F channels=$SLACK_CHANNEL_GO \
-               -H "Authorization: Bearer $SLACK_TOKEN" \
-               https://slack.com/api/files.upload
+          curl -X POST https://slack.com/api/files.upload \
+            -H "Authorization: Bearer $SLACK_TOKEN" \
+            -F channels=$SLACK_CHANNEL_GO \
+            -F initial_comment="Daily alarm report (SEND) for ${{ steps.get_date.outputs.date }}" \
+            -F file=@"reports/alarm_report_SEND_${{ steps.get_date.outputs.date }}.html"
 
       - name: Send INTEROP report to Slack
         run: |
-          curl -F file=@reports/alarm_report_INTEROP_${{ steps.get_date.outputs.date }}.html \
-               -F "initial_comment=Daily alarm report (INTEROP) for ${{ steps.get_date.outputs.date }}" \
-               -F channels=$SLACK_CHANNEL_GO \
-               -H "Authorization: Bearer $SLACK_TOKEN" \
-               https://slack.com/api/files.upload
+          curl -X POST https://slack.com/api/files.upload \
+            -H "Authorization: Bearer $SLACK_TOKEN" \
+            -F channels=$SLACK_CHANNEL_GO \
+            -F initial_comment="Daily alarm report (INTEROP) for ${{ steps.get_date.outputs.date }}" \
+            -F file=@"reports/alarm_report_INTEROP_${{ steps.get_date.outputs.date }}.html"
