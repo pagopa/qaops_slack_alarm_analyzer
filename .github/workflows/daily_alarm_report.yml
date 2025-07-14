@@ -51,34 +51,40 @@ jobs:
           name: alarm-reports-${{ steps.get_date.outputs.date }}
           path: reports/
 
+      - name: Create Slack payload for SEND
+        run: |
+          echo '{
+            "channel": "'"${SLACK_CHANNEL_GO}"'",
+            "text": "*Daily alarm report (SEND)* for `${{ steps.get_date.outputs.date }}` has been generated.",
+            "attachments": [
+              {
+                "text": "You can download it from the GitHub artifact section: *alarm-reports-${{ steps.get_date.outputs.date }}*"
+              }
+            ]
+          }' > send_payload.json
+
       - name: Notify report (SEND) on Slack
         uses: slackapi/slack-github-action@v1.24.0
         with:
-          payload: |
-            {
-              "channel": "${{ env.SLACK_CHANNEL_GO }}",
-              "text": "*Daily alarm report (SEND)* for `${{ steps.get_date.outputs.date }}` has been generated.",
-              "attachments": [
-                {
-                  "text": "You can download it from the GitHub artifact section: *alarm-reports-${{ steps.get_date.outputs.date }}*"
-                }
-              ]
-            }
+          payload-file-path: send_payload.json
         env:
           SLACK_BOT_TOKEN: ${{ env.SLACK_TOKEN }}
+
+      - name: Create Slack payload for INTEROP
+        run: |
+          echo '{
+            "channel": "'"${SLACK_CHANNEL_GO}"'",
+            "text": "*Daily alarm report (INTEROP)* for `${{ steps.get_date.outputs.date }}` has been generated.",
+            "attachments": [
+              {
+                "text": "You can download it from the GitHub artifact section: *alarm-reports-${{ steps.get_date.outputs.date }}*"
+              }
+            ]
+          }' > interop_payload.json
 
       - name: Notify report (INTEROP) on Slack
         uses: slackapi/slack-github-action@v1.24.0
         with:
-          payload: |
-            {
-              "channel": "${{ env.SLACK_CHANNEL_GO }}",
-              "text": "*Daily alarm report (INTEROP)* for `${{ steps.get_date.outputs.date }}` has been generated.",
-              "attachments": [
-                {
-                  "text": "You can download it from the GitHub artifact section: *alarm-reports-${{ steps.get_date.outputs.date }}*"
-                }
-              ]
-            }
+          payload-file-path: interop_payload.json
         env:
           SLACK_BOT_TOKEN: ${{ env.SLACK_TOKEN }}
