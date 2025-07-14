@@ -78,13 +78,13 @@ jobs:
       - name: Notify report (SEND) on Slack
         uses: slackapi/slack-github-action@v2.1.1
         with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_TOKEN }}
           payload-file-path: send_payload.json
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
 
       - name: Notify report (INTEROP) on Slack
         uses: slackapi/slack-github-action@v2.1.1
         with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_TOKEN }}
           payload-file-path: interop_payload.json
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
