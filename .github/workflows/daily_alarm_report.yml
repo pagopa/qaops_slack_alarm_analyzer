@@ -12,10 +12,11 @@ jobs:
   daily-report:
     runs-on: ubuntu-latest
     env:
+      SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
       SLACK_CHANNEL_SEND: ${{ secrets.SLACK_CHANNEL_SEND }}
       SLACK_CHANNEL_INTEROP: ${{ secrets.SLACK_CHANNEL_INTEROP }}
       SLACK_CHANNEL_GO: ${{ secrets.SLACK_CHANNEL_GO }}
-
+      
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -75,14 +76,14 @@ jobs:
           }' > interop_payload.json
 
       - name: Notify report (SEND) on Slack
-        uses: slackapi/slack-github-action@v1.24.0
+        uses: slackapi/slack-github-action@v2.1.1
         with:
           payload-file-path: send_payload.json
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
 
       - name: Notify report (INTEROP) on Slack
-        uses: slackapi/slack-github-action@v1.24.0
+        uses: slackapi/slack-github-action@v2.1.1
         with:
           payload-file-path: interop_payload.json
         env:
