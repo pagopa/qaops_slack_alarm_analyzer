@@ -58,7 +58,7 @@ jobs:
             "text": "*Daily alarm report (SEND)* for `${{ steps.get_date.outputs.date }}` has been generated.",
             "attachments": [
               {
-                "text": "You can download it from the GitHub artifact section: *alarm-reports-${{ steps.get_date.outputs.date }}*"
+                "text": "[View artifacts on GitHub](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
               }
             ]
           }' > send_payload.json
@@ -70,7 +70,7 @@ jobs:
             "text": "*Daily alarm report (INTEROP)* for `${{ steps.get_date.outputs.date }}` has been generated.",
             "attachments": [
               {
-                "text": "You can download it from the GitHub artifact section: *alarm-reports-${{ steps.get_date.outputs.date }}*"
+                "text": "[View report on GitHub](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
               }
             ]
           }' > interop_payload.json
