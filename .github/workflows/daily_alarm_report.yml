@@ -3,7 +3,7 @@ name: Daily Slack alarm report
 on:
   schedule:
     - cron: "10 7 * * *"  # Every day at 9:10 Rome (summer) / 08:10 Rome (winter)
-  workflow_dispatch:     # Allow manual trigger too
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -51,18 +51,34 @@ jobs:
           name: alarm-reports-${{ steps.get_date.outputs.date }}
           path: reports/
 
-      - name: Send SEND report to Slack
-        run: |
-          curl -X POST https://slack.com/api/files.upload \
-            -H "Authorization: Bearer $SLACK_TOKEN" \
-            -F channels=$SLACK_CHANNEL_GO \
-            -F initial_comment="Daily alarm report (SEND) for ${{ steps.get_date.outputs.date }}" \
-            -F file=@"reports/alarm_report_SEND_${{ steps.get_date.outputs.date }}.html"
+      - name: Notify report (SEND) on Slack
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "channel": "${{ env.SLACK_CHANNEL_GO }}",
+              "text": "*Daily alarm report (SEND)* for `${{ steps.get_date.outputs.date }}` has been generated.",
+              "attachments": [
+                {
+                  "text": "You can download it from the GitHub artifact section: *alarm-reports-${{ steps.get_date.outputs.date }}*"
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ env.SLACK_TOKEN }}
 
-      - name: Send INTEROP report to Slack
-        run: |
-          curl -X POST https://slack.com/api/files.upload \
-            -H "Authorization: Bearer $SLACK_TOKEN" \
-            -F channels=$SLACK_CHANNEL_GO \
-            -F initial_comment="Daily alarm report (INTEROP) for ${{ steps.get_date.outputs.date }}" \
-            -F file=@"reports/alarm_report_INTEROP_${{ steps.get_date.outputs.date }}.html"
+      - name: Notify report (INTEROP) on Slack
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "channel": "${{ env.SLACK_CHANNEL_GO }}",
+              "text": "*Daily alarm report (INTEROP)* for `${{ steps.get_date.outputs.date }}` has been generated.",
+              "attachments": [
+                {
+                  "text": "You can download it from the GitHub artifact section: *alarm-reports-${{ steps.get_date.outputs.date }}*"
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ env.SLACK_TOKEN }}
