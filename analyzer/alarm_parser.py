@@ -3,6 +3,8 @@ from datetime import datetime
 from collections import defaultdict, Counter
 
 DETAILED_TIME_HISTOGRAM = True  # Set False to disable hourly distribution
+OPENING_PATTERN = re.compile(r'^"ALARM:\s*"([^"]+)"\s*in\s+([^"]+)"\s*.*\|(\d+)>')
+CLOSING_PATTERN = re.compile(r'CloudWatch closed alert .*?\|#(\d+)> "ALARM:\s*"([^"]+)"\s*in\s+([^"]+)"')
 
 def parse_slack_ts(ts_str):
     return datetime.fromtimestamp(float(ts_str))
@@ -127,7 +129,6 @@ def display_alarm_statistics(alarm_stats, total_alarms, date_str):
     
     print("\n" + "=" * 50)
 
-
 def parse_date(date_str):
     """
     Convert a date string in 'dd-mm-yy' format to Unix timestamps (start and end of day),
@@ -146,3 +147,28 @@ def parse_date(date_str):
     except ValueError:
         print("Error: Invalid date format. Please use dd-mm-yy (e.g., 24-06-25)")
         import sys; sys.exit(1)
+
+def parse_open_closing_pairs(messages):
+    openings = {}
+    closings = {}
+
+    for msg in messages:
+        if 'attachments' not in msg:
+            continue
+         
+        fallback = msg['attachments'][0].get('fallback', '')
+        ts = float(msg.get('ts', 0))
+
+        open_match = re.search(OPENING_PATTERN, fallback)
+        if open_match:
+            alarm_name, region, alarm_id = open_match.groups()
+            openings[alarm_id] = (ts, alarm_name)
+            continue
+
+        close_match = re.search(CLOSING_PATTERN, fallback)
+        if close_match:
+            alarm_id = close_match.group(1)
+            closings[alarm_id] = ts
+            continue
+
+    return openings, closings
