@@ -1,14 +1,15 @@
 from dotenv import load_dotenv
+from datetime import datetime
 import os
 import sys
 from analyzer.slack_api import fetch_slack_messages, SlackAPIError
 from analyzer.alarm_parser import analyze_alarms, display_alarm_statistics, parse_date
 from analyzer.report import generate_html_report
+from analyzer.time_utils import get_evening_window
 
 def main():
     if len(sys.argv) != 3:
         print("Usage: python analyze.py <date> <mode>")
-        print("Date format: dd-mm-yy (e.g., 24-06-25)")
         print("Mode: SEND or INTEROP")
         sys.exit(1)
 
@@ -36,14 +37,18 @@ def main():
         sys.exit(1)
 
     try:
-        oldest, latest, formatted_date = parse_date(date_str)
+        #oldest, latest, formatted_date = parse_date(date_str)
+        oldest, latest = get_evening_window(date_str)
     except ValueError as e:
         print(f"Date parsing error: {e}")
         sys.exit(1)
-
-    print(f"Analyzing alarm messages for {formatted_date} in mode: {mode}")
+    
+    print(f"\n=== Alarm Statistics ===")
+    print("Start window: ", datetime.fromtimestamp(oldest).strftime('%Y-%m-%d %H:%M:%S'))
+    print("End window:", datetime.fromtimestamp(latest).strftime('%Y-%m-%d %H:%M:%S'))
+    print(f"Analyzing alarm for service: {mode}")
     print(f"Channel ID: {channel_id}")
-
+  
     try:
         messages = fetch_slack_messages(channel_id, bot_token, oldest, latest)
     except SlackAPIError as e:
@@ -54,8 +59,9 @@ def main():
         sys.exit(1)
 
     alarm_stats, total_alarms = analyze_alarms(messages, mode)
+    print(f"Total alarm messages: {total_alarms}")
 
-    #display_alarm_statistics(alarm_stats, total_alarms, formatted_date) #command line: python3 -m scripts.analyze 13-07-25 SEND
+    #display_alarm_statistics(alarm_stats, total_alarms) #command line: python3 -m scripts.analyze 13-07-25 SEND
     report_path = generate_html_report(alarm_stats, total_alarms, date_str, mode)
     print(f"Report generated at: {report_path}")
 

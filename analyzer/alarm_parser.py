@@ -98,14 +98,12 @@ def print_hourly_distribution(timestamps):
         
         print(f"{icon} {hour:02d}:00–{(hour + 1) % 24:02d}:00 → {count} occurrences")
 
-def display_alarm_statistics(alarm_stats, total_alarms, date_str):
+def display_alarm_statistics(alarm_stats, total_alarms):
     """Display summary statistics of alarms."""
     if total_alarms == 0:
-        print(f"No alarm messages found for {date_str}")
+        print(f"No alarm messages found for this range")
         return
     
-    print(f"\n=== Alarm Statistics for {date_str} ===")
-    print(f"Total alarm messages: {total_alarms}")
     print("=" * 50)
     
     sorted_alarms = sorted(alarm_stats.items(), key=lambda x: len(x[1]), reverse=True)
