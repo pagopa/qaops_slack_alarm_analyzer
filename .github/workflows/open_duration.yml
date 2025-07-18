@@ -1,0 +1,50 @@
+name: Open alarm duration report
+
+on:
+  workflow_dispatch:
+    inputs:
+      days_back:
+        description: "Number of past days to include"
+        required: false
+        default: "3"
+
+permissions:
+  contents: read
+
+jobs:
+  run-open-duration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+    
+      - name: Calculate report date
+        id: get_date
+        run: |
+          REPORT_DATE=$(date -u "+%d-%m-%y")
+          echo "date=$REPORT_DATE" >> $GITHUB_OUTPUT
+
+      - name: Run open alarm duration report
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CHANNEL_SEND: ${{ secrets.SLACK_CHANNEL_SEND }}
+          SLACK_CHANNEL_INTEROP: ${{ secrets.SLACK_CHANNEL_INTEROP }}
+        run: |
+          python3 -m scripts.open_duration ${{ inputs.days_back }}
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+            name: duration-report-${{ steps.get_date.outputs.date }}
+            path: reports/alarm_report_${{ steps.get_date.outputs.date }}.html

@@ -1,10 +1,12 @@
 from dotenv import load_dotenv
 import os
 import sys
+from datetime import datetime
 from analyzer.slack_api import fetch_slack_messages, SlackAPIError
 from analyzer.time_utils import get_time_bounds
 from analyzer.alarm_parser import parse_open_closing_pairs
 from datetime import datetime, timezone
+from analyzer.report import generate_duration_report
 
 def format_duration(seconds):
     if seconds is None:
@@ -72,6 +74,20 @@ def main():
             print(f"#{name_field} | {alarm_id}  | Opened: {open_time} | Closed: {close_time} | Duration: {dur_str}")
         else:
             print(f"#{name_field} | {alarm_id}  | Opened: {open_time} | STILL OPEN")
+
+    # Crea HTML report
+    date_str = datetime.fromtimestamp(latest).strftime("%Y-%m-%d")
+    report_path = generate_duration_report(
+        durations=durations,
+        date_str=date_str,
+        days_back=days_back,
+        oldest=oldest,
+        latest=latest,
+        num_messages=len(messages),
+        num_openings=len(openings),
+        num_closings=len(closings)
+    )
+    print(f"\n📄 Report generated at: {report_path}")
 
 if __name__ == "__main__":
     main()
