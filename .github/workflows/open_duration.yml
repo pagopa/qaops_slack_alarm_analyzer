@@ -28,12 +28,6 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
-    
-      - name: Calculate report date
-        id: get_date
-        run: |
-          REPORT_DATE=$(date -u "+%d-%m-%y")
-          echo "date=$REPORT_DATE" >> $GITHUB_OUTPUT
 
       - name: Run open alarm duration report
         env:
@@ -46,5 +40,5 @@ jobs:
       - name: Upload report as artifact
         uses: actions/upload-artifact@v4
         with:
-            name: duration-report-${{ steps.get_date.outputs.date }}
-            path: reports/alarm_report_${{ steps.get_date.outputs.date }}.html
+            name: duration-report-${{ inputs.days_back }}
+            path: reports/duration_report_*.html
