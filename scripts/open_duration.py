@@ -30,6 +30,10 @@ def main():
         sys.exit(1)
 
     days_back = int(sys.argv[1]) if len(sys.argv) == 2 else 1
+    if days_back > 30:
+        print("Error: days_back cannot be greater than 30.")
+        sys.exit(1)
+
     oldest, latest = get_time_bounds(days_back)
 
     print(f"Fetching messages from the last {days_back} day(s)...")
