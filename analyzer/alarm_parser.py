@@ -3,7 +3,7 @@ from datetime import datetime
 from collections import defaultdict, Counter
 
 DETAILED_TIME_HISTOGRAM = True  # Set False to disable hourly distribution
-OPENING_PATTERN = re.compile(r'^"ALARM:\s*"([^"]+)"\s*in\s+([^"]+)"\s*.*\|(\d+)>')
+OPENING_PATTERN = re.compile(r'#(\d+): ALARM: "([^"]+)" in (.+)')
 CLOSING_PATTERN = re.compile(r'CloudWatch closed alert .*?\|#(\d+)> "ALARM:\s*"([^"]+)"\s*in\s+([^"]+)"')
 
 def parse_slack_ts(ts_str):
@@ -13,31 +13,32 @@ def extract_alarm_info(message):
     """Extract alarm info for SEND mode from Slack message attachments."""
     if not message.get('attachments') or len(message['attachments']) == 0:
         return None
-    
-    fallback = message['attachments'][0].get('fallback', '')
-    
-    # Pattern matches fallback text to extract alarm name and location
-    pattern = r'^"ALARM:\s*"([^"]+)"\s*in\s+([^"]+)"'
-    match = re.search(pattern, fallback)
-    if match:
-        alarm_name = match.group(1)
-        location = match.group(2)
-        
-        # Extract ID from URL if present
-        id_pattern = r'\|(\d+)>'
-        id_match = re.search(id_pattern, fallback)
-        alarm_id = id_match.group(1) if id_match else "N/A"
+
+    attachment = message['attachments'][0]
+    title = attachment.get('title', '')
+    fallback = attachment.get('fallback', '')
+
+    # Nuovo pattern per TITLE: "#45533: ALARM: \"AlarmName\" in Location"
+    title_pattern = OPENING_PATTERN
+    title_match = re.search(title_pattern, title)
+
+    if title_match:
+        alarm_id = title_match.group(1)
+        alarm_name = title_match.group(2)
+        location = title_match.group(3)
 
         ts = message.get("ts")
         timestamp = parse_slack_ts(ts) if ts else None
-        
+
         return {
             'id': alarm_id,
             'name': alarm_name,
             "timestamp": timestamp,
             'location': location,
-            'full_text': fallback
+            'full_text': title
         }
+    
+    return None
 
 def extract_alarm_info_interop(message):
     """Extract alarm info for INTEROP mode from Slack message files."""
@@ -153,16 +154,20 @@ def parse_open_closing_pairs(messages):
     for msg in messages:
         if 'attachments' not in msg:
             continue
-         
-        fallback = msg['attachments'][0].get('fallback', '')
+
+        attachment = msg['attachments'][0]
+        fallback = attachment.get('fallback', '')
+        title = attachment.get('title', '')
         ts = float(msg.get('ts', 0))
 
-        open_match = re.search(OPENING_PATTERN, fallback)
+        # Aperture: dal campo "title"
+        open_match = re.search(OPENING_PATTERN, title)
         if open_match:
-            alarm_name, region, alarm_id = open_match.groups()
+            alarm_id, alarm_name, region = open_match.groups()
             openings[alarm_id] = (ts, alarm_name)
             continue
 
+        # Chiusure: dal campo "fallback"
         close_match = re.search(CLOSING_PATTERN, fallback)
         if close_match:
             alarm_id = close_match.group(1)

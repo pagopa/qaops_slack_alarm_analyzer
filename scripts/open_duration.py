@@ -55,7 +55,8 @@ def main():
     durations = []
     for alarm_id, (open_ts, alarm_name) in openings.items():
         close_ts = closings.get(alarm_id)
-        duration = (close_ts - open_ts) if close_ts else None  # in hours
+        now = datetime.now(timezone.utc).timestamp()
+        duration = (close_ts - open_ts) if close_ts else (now - open_ts)  # in hours
         durations.append((alarm_id, alarm_name, open_ts, close_ts, duration))
 
     # Add still open alarms

@@ -103,12 +103,12 @@ def generate_duration_report(durations, date_str, days_back, oldest, latest, num
 
         for alarm_id, alarm_name, open_ts, close_ts, duration in durations:
             open_time = datetime.fromtimestamp(open_ts).strftime('%Y-%m-%d %H:%M:%S')
+            dur_str = f"{duration / 3600:.0f} hours" if duration >= 3600 else f"{duration / 60:.0f} minutes"
+            
             if close_ts:
                 close_time = datetime.fromtimestamp(close_ts).strftime('%Y-%m-%d %H:%M:%S')
-                dur_str = f"{duration / 3600:.0f} hours" if duration >= 3600 else f"{duration / 60:.0f} minutes"
             else:
                 close_time = "STILL OPEN"
-                dur_str = "OPEN"
 
             f.write(f"<tr><td>{alarm_name}</td><td>{alarm_id}</td><td>{open_time}</td><td>{close_time}</td><td>{dur_str}</td></tr>")
 
