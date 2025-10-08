@@ -9,7 +9,7 @@ warnings.filterwarnings('ignore', message='urllib3 v2 only supports OpenSSL 1.1.
 
 from analyzer.slack import fetch_slack_messages, SlackAPIError
 from analyzer.alarm_parser import analyze_alarms
-from analyzer.report import generate_html_report
+from analyzer.reporting import generate_html_report
 from analyzer.utils import get_evening_window
 from analyzer.config.config_reader import ConfigReader
 from analyzer.analyzer_params import AnalyzerParams

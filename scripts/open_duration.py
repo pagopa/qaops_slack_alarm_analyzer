@@ -11,7 +11,7 @@ from analyzer.slack import fetch_slack_messages, SlackAPIError
 from analyzer.utils import get_time_bounds
 from analyzer.alarm_parser import parse_open_closing_pairs
 from datetime import datetime, timezone
-from analyzer.report import generate_duration_report
+from analyzer.reporting import generate_duration_report
 
 def format_duration(seconds):
     if seconds is None:

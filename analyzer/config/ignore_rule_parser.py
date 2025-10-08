@@ -122,16 +122,19 @@ class IgnoreRuleParser:
         """Get the reason why a message was ignored."""
         for rule in self.ignore_rules:
             if self._rule_matches_message(rule, message):
-                if rule.path == "*":
+                # Use custom reason if provided, otherwise use default pattern-based reason
+                if rule.reason:
+                    return rule.reason
+                elif rule.path == "*":
                     return f"Pattern '{rule.pattern}' found (wildcard search)"
                 else:
                     return f"Pattern '{rule.pattern}' found in {rule.path}"
         return "Unknown reason"
 
-    def add_ignore_rule(self, pattern: str, path: str = "*", environments: List[str] = None) -> None:
+    def add_ignore_rule(self, pattern: str, path: str = "*", environments: List[str] = None, reason: str = None) -> None:
         """Add a new ignore rule."""
         if pattern:
-            rule = IgnoreRule(pattern, path, environments)
+            rule = IgnoreRule(pattern, path, environments, reason)
             if rule not in self.ignore_rules:
                 self.ignore_rules.append(rule)
 

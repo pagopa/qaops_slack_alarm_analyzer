@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from .analyzer_params import AnalyzerParams
+from ..analyzer_params import AnalyzerParams
 
 def generate_alarm_statistics_html(alarm_stats, date_str):
     """Generate HTML summary statistics of alarms in table format."""

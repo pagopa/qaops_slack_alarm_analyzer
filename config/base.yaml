@@ -29,6 +29,7 @@ products:
         # Ignores disk space low alerts from any file
         - name: "DiskSpaceLow"
           path: "file.name"
+          reason: "Questa tipologia di errore al momento non viene considerata perché c'è un disservizio fino al 31/10"
 
         # Environment-templated ignore rule: applies to all environments
         # Uses [#env#] placeholder that gets replaced with actual environment name
@@ -59,3 +60,4 @@ products:
       ignore:
         - name: "AWS Notification Message"
           path: "files.name"
+          reason: "Questa tipologia di errore al momento non viene considerata perché c'è un disservizio fino al 31/10"

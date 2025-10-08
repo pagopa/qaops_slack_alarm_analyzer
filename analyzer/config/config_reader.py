@@ -68,12 +68,14 @@ class ConfigReader:
                     name = rule_data.get('name', '')
                     path = rule_data.get('path', '*')
                     environments_list = rule_data.get('environments', [])
+                    reason = rule_data.get('reason', None)
 
                     if name:  # Only create rule if name is provided
                         ignore_rule = IgnoreRule(
                             pattern=name,
                             path=path,
-                            environments=environments_list
+                            environments=environments_list,
+                            reason=reason
                         )
                         ignore_rules.append(ignore_rule)
 
