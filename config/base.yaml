@@ -1,0 +1,61 @@
+# Configuration for QAOps Slack Alarm Analyzer
+# This file defines product-specific settings for alarm monitoring and Slack integration
+
+products:
+  # SEND Product Configuration
+  SEND:
+    # Environment-specific Slack channel configuration
+    # Each environment routes alarm notifications to its designated Slack channel
+    envs:
+      prod:
+        # Production environment Slack channel ID for SEND product alerts
+        slack_channel_id: "C0585442Z39"
+      uat:
+        # UAT environment Slack channel ID for SEND product alerts
+        slack_channel_id: "C03JJLHL5K8"
+
+    # Alarm filtering and ignore rules configuration
+    alarms:
+      ignore:
+        - name: "AWS Notification Message"
+          path: "files.name"
+        # List of alarms to be ignored/filtered out from notifications
+        # Each entry can specify:
+        # - name: exact alarm name or pattern
+        # - path: file path pattern where alarm originates
+        # - environments: list of environments where rule applies (optional, defaults to all)
+
+        # Global ignore rule: applies to all environments
+        # Ignores disk space low alerts from any file
+        - name: "DiskSpaceLow"
+          path: "file.name"
+
+        # Environment-templated ignore rule: applies to all environments
+        # Uses [#env#] placeholder that gets replaced with actual environment name
+        # Example: "WSCORe-API-500-prod", "WSCORe-API-500-uat"
+        - name: "WSCORe-API-500-[#env#]"
+          path: "file.name"
+
+        # Environment-specific ignore rule: applies only to specified environments
+        # This rule ignores minor network flap alerts only in production
+        - name: "MinorNetworkFlap"
+          environments: ["prod"]  # Restricts rule to production environment only
+          path: "file.name"
+
+  # INTEROP Product Configuration
+  INTEROP:
+    # Environment-specific Slack channel configuration for INTEROP product
+    envs:
+      prod:
+        # Production environment Slack channel ID for INTEROP product alerts
+        slack_channel_id: "C0472QPG5D2"
+      test:
+        # Test environment - empty string indicates no Slack notifications
+        # Alerts for this environment will be processed but not sent to Slack
+        slack_channel_id: ""
+
+    # Alarm filtering and ignore rules configuration for INTEROP
+    alarms:
+      ignore:
+        - name: "AWS Notification Message"
+          path: "files.name"

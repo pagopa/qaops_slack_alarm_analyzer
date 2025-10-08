@@ -1,9 +1,14 @@
 from dotenv import load_dotenv
 import os
 import sys
+import warnings
 from datetime import datetime
-from analyzer.slack_api import fetch_slack_messages, SlackAPIError
-from analyzer.time_utils import get_time_bounds
+
+# Suppress urllib3 warning about OpenSSL version
+warnings.filterwarnings('ignore', message='urllib3 v2 only supports OpenSSL 1.1.1+')
+
+from analyzer.slack import fetch_slack_messages, SlackAPIError
+from analyzer.utils import get_time_bounds
 from analyzer.alarm_parser import parse_open_closing_pairs
 from datetime import datetime, timezone
 from analyzer.report import generate_duration_report
