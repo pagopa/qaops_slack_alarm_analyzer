@@ -9,23 +9,54 @@ warnings.filterwarnings('ignore', message='urllib3 v2 only supports OpenSSL 1.1.
 
 from analyzer.slack import fetch_slack_messages, SlackAPIError
 from analyzer.alarm_parser import analyze_alarms
-from analyzer.reporting import generate_html_report
+from analyzer.reporting.html_reporter import generate_html_report
 from analyzer.utils import get_evening_window
 from analyzer.config.config_reader import ConfigReader
 from analyzer.analyzer_params import AnalyzerParams
 
-def main():
-    if len(sys.argv) < 3 or len(sys.argv) > 4:
-        print("Usage: python analyze.py <date> <product> [environment]")
+def parse_arguments():
+    """Parse command line arguments including report formats."""
+    if len(sys.argv) < 3:
+        print("Usage: python analyze.py <date> <product> [environment] [report=formats]")
         print("Examples:")
         print("  python analyze.py 19-09-25 SEND")
         print("  python analyze.py 19-09-25 SEND prod")
         print("  python analyze.py 19-09-25 INTEROP test")
+        print("  python analyze.py 19-09-25 SEND prod report=html")
+        print("  python analyze.py 19-09-25 SEND prod report=html,json")
+        print("  python analyze.py 19-09-25 SEND prod report=pdf,csv")
+        print("Report formats: html, pdf, csv, json (default: html)")
         sys.exit(1)
 
     date_str = sys.argv[1]
     product = sys.argv[2].upper()
-    environment = sys.argv[3] if len(sys.argv) == 4 else 'prod'
+
+    # Parse remaining arguments for environment and report
+    environment = 'prod'
+    report_formats = ['html']  # Default
+    valid_formats = {'html', 'pdf', 'csv', 'json'}
+
+    for i in range(3, len(sys.argv)):
+        arg = sys.argv[i]
+        if arg.startswith('report='):
+            # Parse report formats
+            formats_str = arg.split('=', 1)[1]
+            report_formats = [fmt.strip() for fmt in formats_str.split(',')]
+
+            # Validate report formats
+            invalid_formats = [fmt for fmt in report_formats if fmt not in valid_formats]
+            if invalid_formats:
+                print(f"Error: Invalid report format(s): {', '.join(invalid_formats)}")
+                print(f"Valid formats are: {', '.join(sorted(valid_formats))}")
+                sys.exit(1)
+        else:
+            # Assume it's environment if not a report parameter
+            environment = arg
+
+    return date_str, product, environment, report_formats
+
+def main():
+    date_str, product, environment, report_formats = parse_arguments()
 
     # Load and validate configuration
     try:
@@ -108,8 +139,25 @@ def main():
     alarm_stats, total_alarms, ignored_messages = analyze_alarms(messages, analyzer_params)
     print(f"Total alarm messages: {total_alarms}")
 
-    report_path = generate_html_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
-    print(f"Report generated at: {report_path}")
+    # Generate reports based on requested formats
+    if 'html' in report_formats:
+        report_path = generate_html_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
+        print(f"HTML report generated at: {report_path}")
+
+    if 'pdf' in report_formats:
+        try:
+            from analyzer.reporting.pdf_reporter import PdfReporter
+            pdf_reporter = PdfReporter()
+            pdf_path = pdf_reporter.generate_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
+            print(f"PDF report generated at: {pdf_path}")
+        except ImportError as e:
+            print(f"PDF report generation failed: {e}")
+
+    # TODO: Add CSV and JSON report generation when implemented
+    if 'csv' in report_formats:
+        print("CSV report generation not yet implemented")
+    if 'json' in report_formats:
+        print("JSON report generation not yet implemented")
 
 if __name__ == "__main__":
     main()

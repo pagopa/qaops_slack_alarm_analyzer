@@ -1,6 +1,8 @@
 import os
 from datetime import datetime
+from typing import Dict, Any, List
 from ..analyzer_params import AnalyzerParams
+from .reporter import Reporter
 
 def generate_alarm_statistics_html(alarm_stats, date_str):
     """Generate HTML summary statistics of alarms in table format."""
@@ -284,6 +286,11 @@ def generate_html_report(alarm_stats, total_alarms, params: AnalyzerParams, igno
         f.write(html_content)
 
     return report_path
+
+
+class HtmlReporter:
+    def generate_report(self, alarm_stats: Dict[str, Any], total_alarms: int, analyzer_params: AnalyzerParams, ignored_messages: List[Dict[str, Any]]) -> str:
+        return generate_html_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
 
 def generate_duration_report(durations, date_str, days_back, oldest, latest, num_messages, num_openings, num_closings):
     os.makedirs("reports", exist_ok=True)

@@ -2,3 +2,5 @@ python-dateutil
 requests
 python-dotenv
 pytz
+PyYAML
+weasyprint
