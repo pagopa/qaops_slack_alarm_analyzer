@@ -1,7 +1,3 @@
-"""
-PDF report generator for QAOps Slack Alarm Analyzer.
-Uses WeasyPrint for HTML to PDF conversion.
-"""
 import os
 import tempfile
 from typing import Dict, Any, List
@@ -13,10 +9,7 @@ from .reporter import Reporter
 
 
 class PdfReporter:
-    """PDF report generator that converts HTML reports to PDF format."""
-
     def __init__(self):
-        """Initialize PDF reporter."""
         pass
 
     def generate_report(
@@ -26,18 +19,6 @@ class PdfReporter:
         analyzer_params: AnalyzerParams,
         ignored_messages: List[Dict[str, Any]]
     ) -> str:
-        """
-        Generate a PDF report by converting HTML report to PDF.
-
-        Args:
-            alarm_stats: Dictionary containing alarm statistics
-            total_alarms: Total number of alarm messages
-            analyzer_params: Analysis parameters containing configuration
-            ignored_messages: List of messages that were ignored
-
-        Returns:
-            str: Path to the generated PDF report file
-        """
         # First generate HTML content using existing HTML reporter
         with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as temp_html:
             html_content = self._generate_html_content(alarm_stats, total_alarms, analyzer_params, ignored_messages)
@@ -61,7 +42,6 @@ class PdfReporter:
         analyzer_params: AnalyzerParams,
         ignored_messages: List[Dict[str, Any]]
     ) -> str:
-        """Generate HTML content for PDF conversion using Jinja2 template."""
         # Setup Jinja2 environment
         template_dir = os.path.join(os.path.dirname(__file__), 'templates')
         env = Environment(loader=FileSystemLoader(template_dir))
@@ -111,7 +91,6 @@ class PdfReporter:
         return html_content
 
     def _get_pdf_filepath(self, analyzer_params: AnalyzerParams) -> str:
-        """Generate the PDF file path."""
         reports_dir = "reports"
         os.makedirs(reports_dir, exist_ok=True)
         filename = f"alarm_report_{analyzer_params.product}_{analyzer_params.environment}_{analyzer_params.date_str}.pdf"

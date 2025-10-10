@@ -31,10 +31,17 @@ def parse_arguments():
     date_str = sys.argv[1]
     product = sys.argv[2].upper()
 
+    # Define valid formats with their corresponding reporter classes
+    valid_formats = {
+        'html': {'class': 'HtmlReporter', 'module': 'analyzer.reporting.html_reporter' },
+        'pdf': { 'class': 'PdfReporter', 'module': 'analyzer.reporting.pdf_reporter' },
+        'csv': { 'class': 'CsvReporter', 'module': 'analyzer.reporting.csv_reporter' },
+        'json': { 'class': 'JsonReporter', 'module': 'analyzer.reporting.json_reporter' }
+    }
+
     # Parse remaining arguments for environment and report
     environment = 'prod'
     report_formats = ['html']  # Default
-    valid_formats = {'html', 'pdf', 'csv', 'json'}
 
     for i in range(3, len(sys.argv)):
         arg = sys.argv[i]
@@ -47,16 +54,16 @@ def parse_arguments():
             invalid_formats = [fmt for fmt in report_formats if fmt not in valid_formats]
             if invalid_formats:
                 print(f"Error: Invalid report format(s): {', '.join(invalid_formats)}")
-                print(f"Valid formats are: {', '.join(sorted(valid_formats))}")
+                print(f"Valid formats are: {', '.join(sorted(valid_formats.keys()))}")
                 sys.exit(1)
         else:
             # Assume it's environment if not a report parameter
             environment = arg
 
-    return date_str, product, environment, report_formats
+    return date_str, product, environment, report_formats, valid_formats
 
 def main():
-    date_str, product, environment, report_formats = parse_arguments()
+    date_str, product, environment, report_formats, valid_formats = parse_arguments()
 
     # Load and validate configuration
     try:
@@ -140,38 +147,33 @@ def main():
     print(f"Total alarm messages: {total_alarms}")
 
     # Generate reports based on requested formats
-    if 'html' in report_formats:
-        report_path = generate_html_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
-        print(f"HTML report generated at: {report_path}")
-
-    if 'pdf' in report_formats:
+    for format_name in report_formats:
         try:
-            from analyzer.reporting.pdf_reporter import PdfReporter
-            pdf_reporter = PdfReporter()
-            pdf_path = pdf_reporter.generate_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
-            print(f"PDF report generated at: {pdf_path}")
+            format_config = valid_formats[format_name]
+            module_name = format_config['module']
+            class_name = format_config['class']
+
+            # Import the module dynamically
+            module = __import__(module_name, fromlist=[class_name])
+            reporter_class = getattr(module, class_name)
+
+            # Instantiate and generate report
+            reporter = reporter_class()
+            report_path = reporter.generate_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
+            print(f"{format_name.upper()} report generated at: {report_path}")
+
         except ImportError as e:
-            if 'weasyprint' in str(e):
-                print(f"PDF report generation failed: WeasyPrint not available. Install with: pip install weasyprint")
-            elif 'jinja2' in str(e).lower():
-                print(f"PDF report generation failed: Jinja2 not available. Install with: pip install Jinja2")
+            # Handle specific import errors with helpful messages
+            error_msg = str(e).lower()
+            if 'weasyprint' in error_msg:
+                print(f"{format_name.upper()} report generation failed: WeasyPrint not available. Install with: pip install weasyprint")
+            elif 'jinja2' in error_msg:
+                print(f"{format_name.upper()} report generation failed: Jinja2 not available. Install with: pip install Jinja2")
             else:
-                print(f"PDF report generation failed: {e}")
-        except Exception as e:
-            print(f"PDF report generation failed: {e}")
+                print(f"{format_name.upper()} report generation failed: {e}")
 
-    if 'csv' in report_formats:
-        try:
-            from analyzer.reporting.csv_reporter import CsvReporter
-            csv_reporter = CsvReporter()
-            csv_path = csv_reporter.generate_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
-            print(f"CSV report generated at: {csv_path}")
         except Exception as e:
-            print(f"CSV report generation failed: {e}")
-
-    # TODO: Add JSON report generation when implemented
-    if 'json' in report_formats:
-        print("JSON report generation not yet implemented")
+            print(f"{format_name.upper()} report generation failed: {e}")
 
 if __name__ == "__main__":
     main()
