@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alarm Report - {{ date_str }} - {{ product }} - {{ environment_upper }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.3;
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            color: #333;
+        }
+
+        .container {
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 0;
+            background-color: white;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 16pt;
+            margin: 0 0 15pt 0;
+            border-bottom: 2pt solid #d73527;
+            padding-bottom: 5pt;
+            page-break-after: avoid;
+        }
+
+        h2 {
+            color: #444;
+            font-size: 14pt;
+            margin: 15pt 0 8pt 0;
+            page-break-after: avoid;
+            page-break-before: auto;
+        }
+
+        .summary {
+            background-color: #f8f8f8;
+            padding: 10pt;
+            margin: 8pt 0 12pt 0;
+            border-left: 3pt solid #007acc;
+            page-break-inside: avoid;
+            page-break-after: avoid;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15pt 0;
+            font-size: 9pt;
+            page-break-inside: auto;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 6pt 4pt;
+            border: 0.5pt solid #ddd;
+            vertical-align: top;
+            word-wrap: break-word;
+        }
+
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            font-size: 9pt;
+        }
+
+        thead {
+            display: table-header-group;
+        }
+
+        tbody {
+            display: table-row-group;
+        }
+
+        tr {
+            page-break-inside: avoid;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        /* Specific column widths for alarm table */
+        th:nth-child(1), td:nth-child(1) { width: 40%; }  /* Alarm Name */
+        th:nth-child(2), td:nth-child(2) { width: 8%; text-align: center; }   /* Count */
+        th:nth-child(3), td:nth-child(3) { width: 30%; }  /* Recent Occurrences */
+        th:nth-child(4), td:nth-child(4) { width: 22%; }  /* Hourly Distribution */
+
+        .count-cell {
+            text-align: center;
+            font-size: 12pt;
+            font-weight: bold;
+            color: #d73527;
+        }
+
+        .alarm-name {
+            font-weight: bold;
+            color: #333;
+            word-break: break-word;
+        }
+
+        .occurrences {
+            font-family: 'Courier New', monospace;
+            font-size: 8pt;
+            line-height: 1.2;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20pt;
+        }
+
+        /* Ensure long text breaks properly */
+        td {
+            word-break: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
+
+        /* Hourly distribution styling */
+        .hourly-dist {
+            font-size: 8pt;
+            line-height: 1.1;
+        }
+
+        /* Grouping for better page flow */
+        .summary + h2 {
+            page-break-before: avoid;
+            margin-top: 8pt;
+        }
+
+        h2 + table {
+            page-break-before: avoid;
+            margin-top: 8pt;
+        }
+
+        /* Prevent orphaned headers */
+        h2:has(+ table) {
+            break-after: avoid-page;
+        }
+
+        /* Print-specific rules */
+        @media print {
+            body { -webkit-print-color-adjust: exact; }
+            .container { page-break-inside: avoid; }
+
+            /* Ensure continuous flow from summary to table */
+            .summary, h2, table {
+                orphans: 2;
+                widows: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 Alarm Report - {{ date_str }} - {{ product }} - {{ environment_upper }}</h1>
+
+        <div class="summary">
+            <strong>Summary:</strong>
+            {% if total_alarms == 0 %}
+                No alarm messages found for {{ date_str }}
+            {% else %}
+                Found <strong>{{ total_alarms }}</strong> alarm messages
+                {% if ignored_messages and ignored_messages|length > 0 %}
+                    and ignored <strong>{{ ignored_messages|length }}</strong> messages
+                {% endif %}
+            {% endif %}
+        </div>
+
+        {% if total_alarms > 0 %}
+            <h2>Alarm Statistics Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Alarm Name</th>
+                        <th>Count</th>
+                        <th>Recent Occurrences</th>
+                        <th>Hourly Distribution</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alarm_name, alarm_entries in alarm_stats_sorted %}
+                        <tr>
+                            <td class="alarm-name">{{ alarm_name }}</td>
+                            <td class="count-cell">{{ alarm_entries|length }}</td>
+                            <td class="occurrences">
+                                {% for alarm in alarm_entries %}
+                                    #{{ alarm.id }} ({{ alarm.timestamp.strftime('%d-%m %H:%M') }})
+                                    {%- if not loop.last %}<br>{% endif %}
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <div class="hourly-dist">
+                                    {% for hour_info in alarm_entries | hourly_distribution %}
+                                        <div>{{ hour_info }}</div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="no-data">No alarms to display.</p>
+        {% endif %}
+
+        {% if ignored_messages and ignored_messages|length > 0 %}
+            <h2>Ignored Messages ({{ ignored_messages|length }} total)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Reason</th>
+                        <th>Content</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ignored in ignored_messages %}
+                        <tr>
+                            <td>{{ ignored.timestamp.strftime('%d-%m-%Y %H:%M:%S') if ignored.timestamp else 'N/A' }}</td>
+                            <td>{{ ignored.reason }}</td>
+                            <td>
+                                {% set content_parts = [] %}
+                                {% if ignored.get('text') %}
+                                    {% set _ = content_parts.append('Text: ' + ignored.text[:100] + ('...' if ignored.text|length > 100 else '')) %}
+                                {% endif %}
+                                {% if ignored.get('title') %}
+                                    {% set _ = content_parts.append('Title: ' + ignored.title[:100] + ('...' if ignored.title|length > 100 else '')) %}
+                                {% endif %}
+                                {% if ignored.get('fallback') %}
+                                    {% set _ = content_parts.append('Fallback: ' + ignored.fallback[:100] + ('...' if ignored.fallback|length > 100 else '')) %}
+                                {% endif %}
+                                {% if ignored.get('file_name') %}
+                                    {% set _ = content_parts.append('File: ' + ignored.file_name) %}
+                                {% endif %}
+                                {% if ignored.get('file_text') %}
+                                    {% set _ = content_parts.append('File content: ' + ignored.file_text) %}
+                                {% endif %}
+
+                                {% if content_parts %}
+                                    {{ content_parts | join('<br>') | safe }}
+                                {% else %}
+                                    No content available
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</body>
+</html>

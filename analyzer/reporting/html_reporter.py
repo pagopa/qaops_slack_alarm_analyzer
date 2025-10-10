@@ -1,6 +1,8 @@
 import os
 from datetime import datetime
 from typing import Dict, Any, List
+from collections import Counter
+from jinja2 import Environment, FileSystemLoader
 from ..analyzer_params import AnalyzerParams
 from .reporter import Reporter
 
@@ -170,127 +172,70 @@ def generate_ignored_alarms_html(ignored_messages):
     html.append("</table>")
     return "\n".join(html)
 
-def generate_html_report(alarm_stats, total_alarms, params: AnalyzerParams, ignored_messages=None):
-    # Create complete HTML document with proper structure and styling
-    html_content = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alarm Report - {params.date_str} - {params.product} - {params.environment_upper}</title>
-    <style>
-        body {{
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f9f9f9;
-        }}
-        .container {{
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        h1 {{
-            color: #333;
-            border-bottom: 3px solid #d73527;
-            padding-bottom: 10px;
-        }}
-        h2 {{
-            color: #444;
-            margin-top: 30px;
-        }}
-        .summary {{
-            background-color: #f0f8ff;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-            border-left: 4px solid #007acc;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }}
-        th, td {{
-            text-align: left;
-            padding: 12px;
-            border: 1px solid #ddd;
-        }}
-        th {{
-            background-color: #f0f0f0;
-            font-weight: bold;
-        }}
-        tr:nth-child(even) {{
-            background-color: #f9f9f9;
-        }}
-        tr:hover {{
-            background-color: #f5f5f5;
-        }}
-        .count-cell {{
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-            color: #d73527;
-        }}
-        .alarm-name {{
-            font-weight: bold;
-            color: #333;
-        }}
-        .occurrences {{
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-        }}
-        .no-data {{
-            text-align: center;
-            color: #666;
-            font-style: italic;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🚨 Alarm Report - {params.date_str} - {params.product} - {params.environment_upper}</h1>
-
-        <div class="summary">
-            <strong>Summary:</strong> """
-
-    if total_alarms == 0:
-        html_content += f"No alarm messages found for {params.date_str}"
-    else:
-        html_content += f"Found <strong>{total_alarms}</strong> alarm messages"
-        if ignored_messages:
-            html_content += f" and ignored <strong>{len(ignored_messages)}</strong> messages"
-
-    html_content += """
-        </div>
-"""
-
-    if total_alarms > 0:
-        html_content += generate_alarm_statistics_html(alarm_stats, params.date_str)
-    else:
-        html_content += '<p class="no-data">No alarms to display.</p>'
-
-    # Add ignored messages section if provided
-    if ignored_messages is not None:
-        html_content += generate_ignored_alarms_html(ignored_messages)
-
-    html_content += """
-    </div>
-</body>
-</html>"""
-
-    report_path = get_report_filepath(params)
-    with open(report_path, 'w', encoding='utf-8') as f:
-        f.write(html_content)
-
-    return report_path
-
-
 class HtmlReporter:
+    """HTML report generator using Jinja2 templates."""
+
     def generate_report(self, alarm_stats: Dict[str, Any], total_alarms: int, analyzer_params: AnalyzerParams, ignored_messages: List[Dict[str, Any]]) -> str:
-        return generate_html_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
+        """Generate HTML report using Jinja2 template."""
+        # Setup Jinja2 environment
+        template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+        env = Environment(loader=FileSystemLoader(template_dir))
+
+        # Add custom filter for hourly distribution
+        def hourly_distribution_filter(alarm_entries):
+            """Custom filter to generate hourly distribution for alarms."""
+            timestamps = [alarm['timestamp'] for alarm in alarm_entries if alarm.get('timestamp')]
+            hours = [ts.hour for ts in timestamps if ts]
+            hour_counts = Counter(hours)
+
+            result = []
+            for hour in range(24):
+                count = hour_counts.get(hour, 0)
+                if count > 0:
+                    if count <= 2:
+                        icon = "🔹"
+                    elif count <= 5:
+                        icon = "🔸"
+                    elif count <= 9:
+                        icon = "🔺"
+                    else:
+                        icon = "🔥"
+                    time_range = f"{hour:02d}:00–{(hour + 1) % 24:02d}:00"
+                    result.append(f"{time_range} ({count}) {icon}")
+
+            return result
+
+        env.filters['hourly_distribution'] = hourly_distribution_filter
+
+        # Load template
+        template = env.get_template('html_report.html')
+
+        # Prepare alarm stats sorted by count (descending)
+        alarm_stats_sorted = sorted(alarm_stats.items(), key=lambda x: len(x[1]), reverse=True) if alarm_stats else []
+
+        # Render template
+        html_content = template.render(
+            date_str=analyzer_params.date_str,
+            product=analyzer_params.product,
+            environment_upper=analyzer_params.environment_upper,
+            total_alarms=total_alarms,
+            alarm_stats_sorted=alarm_stats_sorted,
+            ignored_messages=ignored_messages
+        )
+
+        # Save to file
+        report_path = get_report_filepath(analyzer_params)
+        with open(report_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+
+        return report_path
+
+
+def generate_html_report(alarm_stats, total_alarms, params: AnalyzerParams, ignored_messages=None):
+    """Generate HTML report using HtmlReporter class with Jinja2 template."""
+    reporter = HtmlReporter()
+    return reporter.generate_report(alarm_stats, total_alarms, params, ignored_messages)
+
 
 def generate_duration_report(durations, date_str, days_back, oldest, latest, num_messages, num_openings, num_closings):
     os.makedirs("reports", exist_ok=True)

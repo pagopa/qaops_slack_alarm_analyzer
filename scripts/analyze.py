@@ -151,11 +151,25 @@ def main():
             pdf_path = pdf_reporter.generate_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
             print(f"PDF report generated at: {pdf_path}")
         except ImportError as e:
+            if 'weasyprint' in str(e):
+                print(f"PDF report generation failed: WeasyPrint not available. Install with: pip install weasyprint")
+            elif 'jinja2' in str(e).lower():
+                print(f"PDF report generation failed: Jinja2 not available. Install with: pip install Jinja2")
+            else:
+                print(f"PDF report generation failed: {e}")
+        except Exception as e:
             print(f"PDF report generation failed: {e}")
 
-    # TODO: Add CSV and JSON report generation when implemented
     if 'csv' in report_formats:
-        print("CSV report generation not yet implemented")
+        try:
+            from analyzer.reporting.csv_reporter import CsvReporter
+            csv_reporter = CsvReporter()
+            csv_path = csv_reporter.generate_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
+            print(f"CSV report generated at: {csv_path}")
+        except Exception as e:
+            print(f"CSV report generation failed: {e}")
+
+    # TODO: Add JSON report generation when implemented
     if 'json' in report_formats:
         print("JSON report generation not yet implemented")
 

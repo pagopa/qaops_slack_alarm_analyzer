@@ -19,6 +19,7 @@ from .html_reporter import (
 )
 from .reporter import Reporter
 from .pdf_reporter import PdfReporter
+from .csv_reporter import CsvReporter
 
 __all__ = [
     'generate_html_report',
@@ -28,5 +29,6 @@ __all__ = [
     'get_report_filepath',
     'HtmlReporter',
     'Reporter',
-    'PdfReporter'
+    'PdfReporter',
+    'CsvReporter'
 ]

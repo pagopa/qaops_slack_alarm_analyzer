@@ -4,3 +4,4 @@ python-dotenv
 pytz
 PyYAML
 weasyprint
+Jinja2
