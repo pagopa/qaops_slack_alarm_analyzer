@@ -8,6 +8,11 @@ on:
         required: false
         default: "3"
 
+      reports:
+        description: "Report formats: html, pdf, csv, json (default: html)"
+        required: false
+        default: "html,pdf"
+
 permissions:
   contents: read
 
