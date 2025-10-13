@@ -28,8 +28,10 @@ def print_usage():
     print("  python open_duration.py 3")
     print("  python open_duration.py 7 report=html")
     print("  python open_duration.py 3 report=html,pdf")
-    print("  python open_duration.py report=pdf")
-    print("Report formats: html, pdf (default: html)")
+    print("  python open_duration.py report=pdf,csv")
+    print("  python open_duration.py 7 report=html,pdf,csv,json")
+    print("  python open_duration.py report=json")
+    print("Report formats: html, pdf, csv, json (default: html)")
 
 def parse_arguments():
     """Parse command line arguments including report formats."""
@@ -42,6 +44,8 @@ def parse_arguments():
     valid_formats = {
         'html': {'class': 'HtmlReporter', 'module': 'analyzer.reporting.html_reporter' },
         'pdf': { 'class': 'PdfReporter', 'module': 'analyzer.reporting.pdf_reporter' },
+        'csv': { 'class': 'CsvReporter', 'module': 'analyzer.reporting.csv_reporter' },
+        'json': { 'class': 'JsonReporter', 'module': 'analyzer.reporting.json_reporter' },
     }
 
     # Parse arguments

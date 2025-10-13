@@ -4,10 +4,11 @@ Exports alarm statistics and ignored messages to JSON format.
 """
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List
 from collections import Counter
 from ..analyzer_params import AnalyzerParams
+from ..duration_params import DurationParams
 from .reporter import Reporter
 
 
@@ -306,3 +307,117 @@ class JsonReporter:
         if isinstance(obj, datetime):
             return obj.isoformat()
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+    def generate_open_duration_report(self, params: DurationParams) -> str:
+        """
+        Generate JSON report for alarm durations (open/close times).
+
+        Args:
+            params: Duration analysis parameters
+
+        Returns:
+            str: Path to the generated JSON file
+        """
+        # Get current time for still-open alarms
+        now = datetime.now(timezone.utc).timestamp()
+
+        # Sort durations by longest open first
+        sorted_durations = sorted(
+            params.durations,
+            key=lambda x: x[4] if x[4] is not None else now - x[2],
+            reverse=True
+        )
+
+        # Process durations into structured JSON data
+        durations_data = []
+        still_open_count = 0
+        closed_count = 0
+        total_duration_seconds = 0
+        max_duration = 0
+        min_duration = float('inf')
+
+        for alarm_id, alarm_name, open_ts, close_ts, duration in sorted_durations:
+            # Calculate actual duration
+            if close_ts:
+                actual_duration = duration
+                status = "closed"
+                closed_count += 1
+                close_time_str = datetime.fromtimestamp(close_ts).isoformat()
+            else:
+                actual_duration = now - open_ts
+                status = "still_open"
+                still_open_count += 1
+                close_time_str = None
+
+            # Update statistics
+            total_duration_seconds += actual_duration
+            max_duration = max(max_duration, actual_duration)
+            if actual_duration > 0:
+                min_duration = min(min_duration, actual_duration)
+
+            # Format duration
+            duration_formatted = {
+                "seconds": round(actual_duration, 2),
+                "minutes": round(actual_duration / 60, 2),
+                "hours": round(actual_duration / 3600, 2),
+                "human_readable": f"{actual_duration / 3600:.2f} hours" if actual_duration >= 3600 else f"{actual_duration / 60:.2f} minutes"
+            }
+
+            duration_item = {
+                "alarm_id": alarm_id,
+                "alarm_name": alarm_name,
+                "opened_at": datetime.fromtimestamp(open_ts).isoformat(),
+                "closed_at": close_time_str,
+                "status": status,
+                "duration": duration_formatted
+            }
+
+            durations_data.append(duration_item)
+
+        # Calculate average duration
+        avg_duration = total_duration_seconds / len(params.durations) if params.durations else 0
+        if min_duration == float('inf'):
+            min_duration = 0
+
+        # Build comprehensive JSON structure
+        report_data = {
+            "metadata": {
+                "report_generated_at": datetime.now(timezone.utc).isoformat(),
+                "analysis_date": params.date_str,
+                "days_analyzed": params.days_back,
+                "analysis_period": {
+                    "from": datetime.fromtimestamp(params.oldest).isoformat(),
+                    "to": datetime.fromtimestamp(params.latest).isoformat()
+                },
+                "report_version": "1.0",
+                "generator": "QAOps Slack Alarm Analyzer - JsonReporter (Duration)"
+            },
+            "summary": {
+                "total_alarms": len(params.durations),
+                "still_open": still_open_count,
+                "closed": closed_count,
+                "messages_fetched": params.num_messages,
+                "openings_detected": params.num_openings,
+                "closings_detected": params.num_closings,
+                "statistics": {
+                    "average_duration_seconds": round(avg_duration, 2),
+                    "average_duration_hours": round(avg_duration / 3600, 2),
+                    "max_duration_seconds": round(max_duration, 2),
+                    "max_duration_hours": round(max_duration / 3600, 2),
+                    "min_duration_seconds": round(min_duration, 2),
+                    "min_duration_hours": round(min_duration / 3600, 2)
+                }
+            },
+            "durations": durations_data
+        }
+
+        # Save to JSON file
+        reports_dir = "reports"
+        os.makedirs(reports_dir, exist_ok=True)
+        json_filename = f"duration_report_{params.date_str}.json"
+        json_path = os.path.join(reports_dir, json_filename)
+
+        with open(json_path, 'w', encoding='utf-8') as json_file:
+            json.dump(report_data, json_file, indent=2, ensure_ascii=False)
+
+        return json_path

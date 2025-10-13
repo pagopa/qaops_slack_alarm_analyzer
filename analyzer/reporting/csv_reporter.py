@@ -4,9 +4,11 @@ Exports alarm statistics and ignored messages to CSV format.
 """
 import os
 import csv
+from datetime import datetime
 from typing import Dict, Any, List
 from collections import Counter
 from ..analyzer_params import AnalyzerParams
+from ..duration_params import DurationParams
 from .reporter import Reporter
 
 
@@ -250,3 +252,72 @@ class CsvReporter:
         os.makedirs(reports_dir, exist_ok=True)
         filename = f"alarm_report_{analyzer_params.product}_{analyzer_params.environment}_{analyzer_params.date_str}_{report_type}.csv"
         return os.path.join(reports_dir, filename)
+
+    def generate_open_duration_report(self, params: DurationParams) -> str:
+        """
+        Generate CSV report for alarm durations (open/close times).
+
+        Args:
+            params: Duration analysis parameters
+
+        Returns:
+            str: Path to the generated CSV file
+        """
+        reports_dir = "reports"
+        os.makedirs(reports_dir, exist_ok=True)
+        csv_filename = f"duration_report_{params.date_str}.csv"
+        csv_path = os.path.join(reports_dir, csv_filename)
+
+        with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+            fieldnames = [
+                'alarm_id',
+                'alarm_name',
+                'opened_at',
+                'closed_at',
+                'status',
+                'duration_seconds',
+                'duration_formatted'
+            ]
+
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            # Sort durations by longest open first (same logic as HTML/PDF reporters)
+            from datetime import timezone
+            now = datetime.now(timezone.utc).timestamp()
+            sorted_durations = sorted(
+                params.durations,
+                key=lambda x: x[4] if x[4] is not None else now - x[2],
+                reverse=True
+            )
+
+            for alarm_id, alarm_name, open_ts, close_ts, duration in sorted_durations:
+                # Format timestamps
+                open_time = datetime.fromtimestamp(open_ts).strftime('%Y-%m-%d %H:%M:%S')
+
+                if close_ts:
+                    close_time = datetime.fromtimestamp(close_ts).strftime('%Y-%m-%d %H:%M:%S')
+                    status = 'CLOSED'
+                    actual_duration = duration
+                else:
+                    close_time = ''
+                    status = 'STILL OPEN'
+                    actual_duration = now - open_ts
+
+                # Format duration
+                if actual_duration >= 3600:
+                    duration_formatted = f"{actual_duration / 3600:.2f} hours"
+                else:
+                    duration_formatted = f"{actual_duration / 60:.2f} minutes"
+
+                writer.writerow({
+                    'alarm_id': alarm_id,
+                    'alarm_name': alarm_name,
+                    'opened_at': open_time,
+                    'closed_at': close_time,
+                    'status': status,
+                    'duration_seconds': f"{actual_duration:.2f}",
+                    'duration_formatted': duration_formatted
+                })
+
+        return csv_path
