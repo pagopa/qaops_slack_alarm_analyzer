@@ -4,17 +4,29 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: 'Date to analyze (dd-mm-yy)'
-        required: true
-        default: '24-06-25'
-      mode:
-        description: 'Mode: SEND or INTEROP'
+        description: 'Date or date range (dd-mm-yy or dd-mm-yy:dd-mm-yy). Leave empty for today.'
+        required: false
+        default: ''
+      product:
+        description: 'Product to analyze'
         required: true
         default: 'SEND'
         type: choice
         options:
           - SEND
           - INTEROP
+      environment:
+        description: 'Environment'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - prod
+          - test
+      report_formats:
+        description: 'Report formats (comma-separated: html,pdf,csv,json)'
+        required: false
+        default: 'html'
 
 permissions:
   contents: read
@@ -37,16 +49,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Set date variable
+        id: set_date
+        run: |
+          if [ -z "${{ github.event.inputs.date }}" ]; then
+            echo "date=$(date +'%d-%m-%y')" >> $GITHUB_OUTPUT
+          else
+            echo "date=${{ github.event.inputs.date }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run Slack alarm analyzer
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          SLACK_CHANNEL_SEND: ${{ secrets.SLACK_CHANNEL_SEND }}
-          SLACK_CHANNEL_INTEROP: ${{ secrets.SLACK_CHANNEL_INTEROP }}
         run: |
-          python3 -m scripts.analyze ${{ github.event.inputs.date }} ${{ github.event.inputs.mode }}
+          python3 -m scripts.analyze ${{ steps.set_date.outputs.date }} ${{ github.event.inputs.product }} ${{ github.event.inputs.environment }} report=${{ github.event.inputs.report_formats }}
 
-      - name: Upload report as artifact
+      - name: Upload reports as artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: alarm-report-${{ inputs.mode }}-${{ inputs.date }}
-          path: reports/alarm_report_${{ inputs.mode }}_${{ inputs.date }}.html
+          name: alarm-reports-${{ inputs.product }}-${{ inputs.environment }}-${{ steps.set_date.outputs.date }}
+          path: reports/
