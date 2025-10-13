@@ -105,7 +105,10 @@ class PdfReporter:
         """Generate open duration PDF report using Jinja2 template."""
         # Create Jinja2 environment
         template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-        env = Environment(loader=FileSystemLoader(template_dir))
+        env = Environment(
+            loader=FileSystemLoader(template_dir),
+            autoescape=select_autoescape(['html', 'xml'])
+        )
 
         # Load PDF template
         template = env.get_template('pdf_open_duration_report.html')
