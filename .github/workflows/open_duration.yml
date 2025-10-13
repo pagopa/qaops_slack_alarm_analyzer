@@ -8,6 +8,11 @@ on:
         required: false
         default: "3"
 
+      reports:
+        description: "Report formats: html, pdf, csv, json (default: html)"
+        required: false
+        default: "html,pdf"
+
 permissions:
   contents: read
 
@@ -35,7 +40,7 @@ jobs:
           SLACK_CHANNEL_SEND: ${{ secrets.SLACK_CHANNEL_SEND }}
           SLACK_CHANNEL_INTEROP: ${{ secrets.SLACK_CHANNEL_INTEROP }}
         run: |
-          python3 -m scripts.open_duration ${{ inputs.days_back }}
+          python3 -m scripts.open_duration ${{ inputs.days_back }} report=${{ inputs.reports }}
 
       - name: Upload report as artifact
         uses: actions/upload-artifact@v4
