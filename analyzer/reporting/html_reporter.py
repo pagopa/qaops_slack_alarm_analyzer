@@ -82,7 +82,10 @@ class HtmlReporter:
         """Generate open duration report using Jinja2 template with same styling as regular reports."""
         # Create Jinja2 environment
         template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-        env = Environment(loader=FileSystemLoader(template_dir))
+        env = Environment(
+            loader=FileSystemLoader(template_dir),
+            autoescape=select_autoescape(['html', 'xml'])
+        )
 
         # Load template
         template = env.get_template('open_duration_report.html')
