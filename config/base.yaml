@@ -27,21 +27,21 @@ products:
 
         # Global ignore rule: applies to all environments
         # Ignores disk space low alerts from any file
-        - name: "DiskSpaceLow"
-          path: "file.name"
-          reason: "Questa tipologia di errore al momento non viene considerata perché c'è un disservizio fino al 31/10"
+        # - name: "DiskSpaceLow"
+        #   path: "file.name"
+        #   reason: "Questa tipologia di errore al momento non viene considerata perché c'è un disservizio fino al 31/10"
 
         # Environment-templated ignore rule: applies to all environments
         # Uses [#env#] placeholder that gets replaced with actual environment name
         # Example: "WSCORe-API-500-prod", "WSCORe-API-500-uat"
-        - name: "WSCORe-API-500-[#env#]"
-          path: "file.name"
+        # - name: "WSCORe-API-500-[#env#]"
+        #   path: "file.name"
 
         # Environment-specific ignore rule: applies only to specified environments
         # This rule ignores minor network flap alerts only in production
-        - name: "MinorNetworkFlap"
-          environments: ["prod"]  # Restricts rule to production environment only
-          path: "file.name"
+        # - name: "MinorNetworkFlap"
+        #   environments: ["prod"]  # Restricts rule to production environment only
+        #   path: "file.name"
 
   # INTEROP Product Configuration
   INTEROP:
@@ -60,4 +60,3 @@ products:
       ignore:
         - name: "AWS Notification Message"
           path: "files.name"
-          reason: "Questa tipologia di errore al momento non viene considerata perché c'è un disservizio fino al 31/10"
