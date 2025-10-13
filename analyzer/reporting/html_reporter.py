@@ -3,7 +3,7 @@ import tempfile
 from datetime import datetime
 from typing import Dict, Any, List
 from collections import Counter
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 import weasyprint
 from ..analyzer_params import AnalyzerParams
 from ..duration_params import DurationParams
@@ -24,7 +24,10 @@ class HtmlReporter:
         """Generate HTML report using Jinja2 template."""
         # Setup Jinja2 environment
         template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-        env = Environment(loader=FileSystemLoader(template_dir))
+        env = Environment(
+            loader=FileSystemLoader(template_dir),
+            autoescape=select_autoescape(['html', 'xml'])
+        )
 
         # Add custom filter for hourly distribution
         def hourly_distribution_filter(alarm_entries):
