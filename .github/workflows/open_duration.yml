@@ -46,4 +46,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
             name: duration-report-${{ inputs.days_back }}
-            path: reports/duration_report_*.html
+            path: reports/
