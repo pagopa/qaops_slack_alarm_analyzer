@@ -1,6 +1,9 @@
 import re
 from datetime import datetime
 from collections import defaultdict, Counter
+from .config import IgnoreRuleParser
+from .analyzer_params import AnalyzerParams
+from .slack import SlackMessageParserProvider
 
 DETAILED_TIME_HISTOGRAM = True  # Set False to disable hourly distribution
 OPENING_PATTERN = re.compile(r'#(\d+): ALARM: "([^"]+)" in (.+)')
@@ -65,20 +68,37 @@ def extract_alarm_info_interop(message):
         'full_text': full_text
     }
 
-def analyze_alarms(messages, mode):
+def analyze_alarms(messages, params: AnalyzerParams):
     """Analyze alarm messages and aggregate by alarm name."""
     alarm_stats = defaultdict(list)
     total_alarms = 0
-    
-    extractor = extract_alarm_info if mode == 'SEND' else extract_alarm_info_interop
-    
+    ignored_messages = []
+
+    # Get ignore rules from the product configuration passed in params
+    applicable_rules = params.product_rules
+    ignore_rule_parser = IgnoreRuleParser(applicable_rules)
+
+    # Get the appropriate parser for this product-environment combination
+    parser_provider = SlackMessageParserProvider()
+    slack_parser = parser_provider.get_parser(params.product, params.environment)
+
+    if not slack_parser:
+        raise ValueError(f"No parser available for product '{params.product}' environment '{params.environment}'")
+
     for message in messages:
-        alarm_info = extractor(message)
+        # Check if message should be ignored (pass environment for context)
+        if ignore_rule_parser.should_ignore_message(message, params.environment):
+            ignored_info = create_ignored_message_info(message, ignore_rule_parser)
+            ignored_messages.append(ignored_info)
+            continue
+
+        alarm_info = slack_parser.extract_alarm_info(message)
         if alarm_info:
             total_alarms += 1
             alarm_stats[alarm_info['name']].append(alarm_info)
-    
-    return alarm_stats, total_alarms
+
+    print(f"Ignored {len(ignored_messages)} messages based on ignore patterns")
+    return alarm_stats, total_alarms, ignored_messages
 
 def print_hourly_distribution(timestamps):
     """Print a 24-hour distribution of timestamps."""
@@ -175,3 +195,25 @@ def parse_open_closing_pairs(messages):
             continue
 
     return openings, closings
+
+def create_ignored_message_info(message, ignore_rule_parser):
+    """Create ignored message info dictionary from a Slack message."""
+    ignored_info = {
+        'timestamp': parse_slack_ts(message.get('ts', '0')),
+        'text': message.get('text', ''),
+        'reason': ignore_rule_parser.get_ignore_reason(message)
+    }
+
+    # Extract additional info from attachments
+    if message.get('attachments'):
+        attachment = message['attachments'][0]
+        ignored_info['title'] = attachment.get('title', '')
+        ignored_info['fallback'] = attachment.get('fallback', '')
+
+    # Extract info from files
+    if message.get('files'):
+        file_info = message['files'][0]
+        ignored_info['file_name'] = file_info.get('name', '')
+        ignored_info['file_text'] = file_info.get('plain_text', '')[:400] + '...' if len(file_info.get('plain_text', '')) > 400 else file_info.get('plain_text', '')
+
+    return ignored_info
