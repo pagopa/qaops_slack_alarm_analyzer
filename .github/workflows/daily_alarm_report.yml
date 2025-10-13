@@ -39,11 +39,11 @@ jobs:
 
       - name: Run analyzer for SEND
         run: |
-          python3 -m scripts.analyze "${{ steps.get_date.outputs.date }}" SEND
+          python3 -m scripts.analyze "${{ steps.get_date.outputs.date }}" SEND prod report
 
       - name: Run analyzer for INTEROP
         run: |
-          python3 -m scripts.analyze "${{ steps.get_date.outputs.date }}" INTEROP
+          python3 -m scripts.analyze "${{ steps.get_date.outputs.date }}" INTEROP prod report=html,pdf
 
       - name: Upload reports
         uses: actions/upload-artifact@v4
