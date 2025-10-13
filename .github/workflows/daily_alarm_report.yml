@@ -39,7 +39,7 @@ jobs:
 
       - name: Run analyzer for SEND
         run: |
-          python3 -m scripts.analyze "${{ steps.get_date.outputs.date }}" SEND prod report
+          python3 -m scripts.analyze "${{ steps.get_date.outputs.date }}" SEND prod report=html,pdf
 
       - name: Run analyzer for INTEROP
         run: |
