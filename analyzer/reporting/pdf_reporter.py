@@ -3,7 +3,7 @@ import tempfile
 from datetime import datetime, timezone
 from typing import Dict, Any, List
 import weasyprint
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from collections import Counter
 from ..analyzer_params import AnalyzerParams
 from ..duration_params import DurationParams
@@ -46,7 +46,10 @@ class PdfReporter:
     ) -> str:
         # Setup Jinja2 environment
         template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-        env = Environment(loader=FileSystemLoader(template_dir))
+        env = Environment(
+            loader=FileSystemLoader(template_dir),
+            autoescape=select_autoescape(['html', 'xml'])
+        )
 
         # Add custom filters
         def hourly_distribution_filter(alarm_entries):
