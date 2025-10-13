@@ -17,13 +17,18 @@ from analyzer.analyzer_params import AnalyzerParams
 def parse_arguments():
     """Parse command line arguments including report formats."""
     if len(sys.argv) < 3:
-        print("Usage: python analyze.py <date> <product> [environment] [report=formats]")
+        print("Usage: python analyze.py <date|date_range> <product> [environment] [report=formats]")
+        print("Date formats:")
+        print("  Single date: DD-MM-YY (e.g., 19-09-25)")
+        print("  Date range: DD-MM-YY:DD-MM-YY (e.g., 19-09-25:21-09-25)")
+        print("")
         print("Examples:")
         print("  python analyze.py 19-09-25 SEND")
+        print("  python analyze.py 19-09-25:21-09-25 SEND")
         print("  python analyze.py 19-09-25 SEND prod")
-        print("  python analyze.py 19-09-25 INTEROP test")
+        print("  python analyze.py 19-09-25:21-09-25 INTEROP test")
         print("  python analyze.py 19-09-25 SEND prod report=html")
-        print("  python analyze.py 19-09-25 SEND prod report=html,json")
+        print("  python analyze.py 19-09-25:21-09-25 SEND prod report=html,json")
         print("  python analyze.py 19-09-25 SEND prod report=pdf,csv")
         print("Report formats: html, pdf, csv, json (default: html)")
         sys.exit(1)
