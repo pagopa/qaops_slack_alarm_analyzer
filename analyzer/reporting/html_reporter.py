@@ -230,6 +230,82 @@ class HtmlReporter:
 
         return report_path
 
+    def generate_open_duration_report(self, durations, date_str, days_back, oldest, latest, num_messages, num_openings, num_closings):
+        """Generate open duration report using Jinja2 template with same styling as regular reports."""
+        # Create Jinja2 environment
+        template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+        env = Environment(loader=FileSystemLoader(template_dir))
+
+        # Load template
+        template = env.get_template('open_duration_report.html')
+
+        # Prepare data for template
+        from_str = datetime.fromtimestamp(oldest).strftime('%Y-%m-%d %H:%M:%S')
+        to_str = datetime.fromtimestamp(latest).strftime('%Y-%m-%d %H:%M:%S')
+
+        # Ensure durations are sorted by longest open first (same logic as open_duration.py)
+        from datetime import timezone
+        now = datetime.now(timezone.utc).timestamp()
+        sorted_durations = sorted(
+            durations,
+            key=lambda x: x[4] if x[4] is not None else now - x[2],  # x[4] is duration, x[2] is open_ts
+            reverse=True  # Longest durations first
+        )
+
+        # Process durations with formatted data
+        processed_durations = []
+        for alarm_id, alarm_name, open_ts, close_ts, duration in sorted_durations:
+            open_time = datetime.fromtimestamp(open_ts).strftime('%Y-%m-%d %H:%M:%S')
+
+            if close_ts:
+                close_time = datetime.fromtimestamp(close_ts).strftime('%Y-%m-%d %H:%M:%S')
+                is_still_open = False
+                # Use the provided duration for closed alarms
+                actual_duration = duration
+            else:
+                close_time = "STILL OPEN"
+                is_still_open = True
+                # Calculate actual duration for still open alarms
+                actual_duration = now - open_ts
+
+            # Format duration (using actual duration for both open and closed)
+            if actual_duration >= 3600:
+                dur_str = f"{actual_duration / 3600:.0f} hours"
+            else:
+                dur_str = f"{actual_duration / 60:.0f} minutes"
+
+            processed_durations.append({
+                'alarm_id': alarm_id,
+                'alarm_name': alarm_name,
+                'open_time': open_time,
+                'close_time': close_time,
+                'duration_str': dur_str,
+                'is_still_open': is_still_open,
+                'duration_seconds': actual_duration
+            })
+
+        # Render template
+        html_content = template.render(
+            date_str=date_str,
+            days_back=days_back,
+            from_str=from_str,
+            to_str=to_str,
+            num_messages=num_messages,
+            num_openings=num_openings,
+            num_closings=num_closings,
+            durations=processed_durations
+        )
+
+        # Save to file
+        os.makedirs("reports", exist_ok=True)
+        report_filename = f"duration_report_{date_str}.html"
+        report_path = os.path.join("reports", report_filename)
+
+        with open(report_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+
+        return report_path
+
 
 def generate_html_report(alarm_stats, total_alarms, params: AnalyzerParams, ignored_messages=None):
     """Generate HTML report using HtmlReporter class with Jinja2 template."""
@@ -238,43 +314,15 @@ def generate_html_report(alarm_stats, total_alarms, params: AnalyzerParams, igno
 
 
 def generate_duration_report(durations, date_str, days_back, oldest, latest, num_messages, num_openings, num_closings):
-    os.makedirs("reports", exist_ok=True)
-    report_filename = f"duration_report_{date_str}.html"
-    report_path = os.path.join("reports", report_filename)
-
-    from_str = datetime.fromtimestamp(oldest).strftime('%Y-%m-%d %H:%M:%S')
-    to_str = datetime.fromtimestamp(latest).strftime('%Y-%m-%d %H:%M:%S')
-
-    with open(report_path, "w") as f:
-        f.write("<html><head><meta charset='UTF-8'><title>Alarm Duration Report</title></head><body>")
-        f.write(f"<h1>Alarm Duration Report - {date_str}</h1>")
-
-        # Intestazione dettagliata
-        f.write("<pre>")
-        f.write(f"Fetching messages from the last {days_back} day(s)...\n")
-        f.write(f"from:  {from_str}\n")
-        f.write(f"to:    {to_str}\n")
-        f.write(f"Fetched {num_messages} messages\n")
-        f.write(f"openings {num_openings} openings\n")
-        f.write(f"closings {num_closings} closings\n")
-        f.write("</pre>")
-
-        # Tabella
-        f.write("<h2>Alarm Durations (longest open first)</h2>")
-        f.write("<table border='1' cellpadding='5' cellspacing='0'>")
-        f.write("<tr><th>Alarm Name</th><th>Alarm ID</th><th>Opened</th><th>Closed</th><th>Duration</th></tr>")
-
-        for alarm_id, alarm_name, open_ts, close_ts, duration in durations:
-            open_time = datetime.fromtimestamp(open_ts).strftime('%Y-%m-%d %H:%M:%S')
-            dur_str = f"{duration / 3600:.0f} hours" if duration >= 3600 else f"{duration / 60:.0f} minutes"
-            
-            if close_ts:
-                close_time = datetime.fromtimestamp(close_ts).strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                close_time = "STILL OPEN"
-
-            f.write(f"<tr><td>{alarm_name}</td><td>{alarm_id}</td><td>{open_time}</td><td>{close_time}</td><td>{dur_str}</td></tr>")
-
-        f.write("</table></body></html>")
-
-    return report_path
+    """Generate duration report using HtmlReporter class for consistency."""
+    reporter = HtmlReporter()
+    return reporter.generate_open_duration_report(
+        durations=durations,
+        date_str=date_str,
+        days_back=days_back,
+        oldest=oldest,
+        latest=latest,
+        num_messages=num_messages,
+        num_openings=num_openings,
+        num_closings=num_closings
+    )

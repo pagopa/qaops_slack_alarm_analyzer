@@ -11,7 +11,7 @@ from analyzer.slack import fetch_slack_messages, SlackAPIError
 from analyzer.utils import get_time_bounds
 from analyzer.alarm_parser import parse_open_closing_pairs
 from datetime import datetime, timezone
-from analyzer.reporting import generate_duration_report
+from analyzer.reporting.html_reporter import HtmlReporter
 
 def format_duration(seconds):
     if seconds is None:
@@ -85,9 +85,10 @@ def main():
         else:
             print(f"#{name_field} | {alarm_id}  | Opened: {open_time} | STILL OPEN")
 
-    # Crea HTML report
+    # Generate HTML report using HtmlReporter system
     date_str = datetime.fromtimestamp(latest).strftime("%Y-%m-%d")
-    report_path = generate_duration_report(
+    reporter = HtmlReporter()
+    report_path = reporter.generate_open_duration_report(
         durations=durations,
         date_str=date_str,
         days_back=days_back,
@@ -97,7 +98,7 @@ def main():
         num_openings=len(openings),
         num_closings=len(closings)
     )
-    print(f"\n📄 Report generated at: {report_path}")
+    print(f"\n📄 HTML report generated at: {report_path}")
 
 if __name__ == "__main__":
     main()
