@@ -43,7 +43,22 @@ class AnalyzerParams:
     def environment_upper(self) -> str:
         """Get environment name in uppercase."""
         return self.environment.upper()
-    
+
+    @property
+    def date_str_safe(self) -> str:
+        """Get date string with special characters replaced for safe filename usage.
+
+        Replaces ':' with '_' to ensure compatibility with:
+        - Windows filesystems (: is a reserved character)
+        - GitHub Actions artifacts (: not allowed in artifact names)
+        - Cross-platform file operations
+
+        Examples:
+            '24-10-25' -> '24-10-25' (no change)
+            '24-10-25:27-10-25' -> '24-10-25_27-10-25'
+        """
+        return self.date_str.replace(':', '_')
+
     @property
     def product_rules(self) -> List[IgnoreRule]:
         return self.product_config.get_applicable_ignore_rules(self.environment)

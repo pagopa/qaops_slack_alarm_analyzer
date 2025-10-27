@@ -13,7 +13,7 @@ from .reporter import Reporter
 def get_report_filepath(params: AnalyzerParams):
     reports_dir = "reports"
     os.makedirs(reports_dir, exist_ok=True)
-    filename = f"alarm_report_{params.product}_{params.environment}_{params.date_str}.html"
+    filename = f"alarm_report_{params.product}_{params.environment}_{params.date_str_safe}.html"
     return os.path.join(reports_dir, filename)
 
 
@@ -149,7 +149,7 @@ class HtmlReporter:
 
         # Save to file
         os.makedirs("reports", exist_ok=True)
-        report_filename = f"duration_report_{params.date_str}.html"
+        report_filename = f"duration_report_{params.date_str_safe}.html"
         report_path = os.path.join("reports", report_filename)
 
         with open(report_path, 'w', encoding='utf-8') as f:

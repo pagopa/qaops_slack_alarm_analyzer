@@ -98,7 +98,7 @@ class PdfReporter:
     def _get_pdf_filepath(self, analyzer_params: AnalyzerParams) -> str:
         reports_dir = "reports"
         os.makedirs(reports_dir, exist_ok=True)
-        filename = f"alarm_report_{analyzer_params.product}_{analyzer_params.environment}_{analyzer_params.date_str}.pdf"
+        filename = f"alarm_report_{analyzer_params.product}_{analyzer_params.environment}_{analyzer_params.date_str_safe}.pdf"
         return os.path.join(reports_dir, filename)
     
     def generate_open_duration_report(self, params: DurationParams):
@@ -175,7 +175,7 @@ class PdfReporter:
         try:
             # Create PDF
             os.makedirs("reports", exist_ok=True)
-            pdf_filename = f"duration_report_{params.date_str}.pdf"
+            pdf_filename = f"duration_report_{params.date_str_safe}.pdf"
             pdf_path = os.path.join("reports", pdf_filename)
             weasyprint.HTML(filename=temp_html_path).write_pdf(pdf_path)
             return pdf_path

@@ -250,7 +250,7 @@ class CsvReporter:
         """Generate the CSV file path for a specific report type."""
         reports_dir = "reports"
         os.makedirs(reports_dir, exist_ok=True)
-        filename = f"alarm_report_{analyzer_params.product}_{analyzer_params.environment}_{analyzer_params.date_str}_{report_type}.csv"
+        filename = f"alarm_report_{analyzer_params.product}_{analyzer_params.environment}_{analyzer_params.date_str_safe}_{report_type}.csv"
         return os.path.join(reports_dir, filename)
 
     def generate_open_duration_report(self, params: DurationParams) -> str:
@@ -265,7 +265,7 @@ class CsvReporter:
         """
         reports_dir = "reports"
         os.makedirs(reports_dir, exist_ok=True)
-        csv_filename = f"duration_report_{params.date_str}.csv"
+        csv_filename = f"duration_report_{params.date_str_safe}.csv"
         csv_path = os.path.join(reports_dir, csv_filename)
 
         with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:

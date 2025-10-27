@@ -299,7 +299,7 @@ class JsonReporter:
         """Generate the JSON file path."""
         reports_dir = "reports"
         os.makedirs(reports_dir, exist_ok=True)
-        filename = f"alarm_report_{analyzer_params.product}_{analyzer_params.environment}_{analyzer_params.date_str}.json"
+        filename = f"alarm_report_{analyzer_params.product}_{analyzer_params.environment}_{analyzer_params.date_str_safe}.json"
         return os.path.join(reports_dir, filename)
 
     def _json_serializer(self, obj):
@@ -414,7 +414,7 @@ class JsonReporter:
         # Save to JSON file
         reports_dir = "reports"
         os.makedirs(reports_dir, exist_ok=True)
-        json_filename = f"duration_report_{params.date_str}.json"
+        json_filename = f"duration_report_{params.date_str_safe}.json"
         json_path = os.path.join(reports_dir, json_filename)
 
         with open(json_path, 'w', encoding='utf-8') as json_file:

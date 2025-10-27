@@ -36,3 +36,18 @@ class DurationParams:
             raise ValueError("num_openings cannot be negative")
         if self.num_closings < 0:
             raise ValueError("num_closings cannot be negative")
+
+    @property
+    def date_str_safe(self) -> str:
+        """Get date string with special characters replaced for safe filename usage.
+
+        Replaces ':' with '_' to ensure compatibility with:
+        - Windows filesystems (: is a reserved character)
+        - GitHub Actions artifacts (: not allowed in artifact names)
+        - Cross-platform file operations
+
+        Examples:
+            '2025-10-27' -> '2025-10-27' (no change)
+            '24-10-25:27-10-25' -> '24-10-25_27-10-25'
+        """
+        return self.date_str.replace(':', '_')
