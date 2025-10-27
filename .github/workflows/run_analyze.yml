@@ -54,8 +54,10 @@ jobs:
         run: |
           if [ -z "${{ github.event.inputs.date }}" ]; then
             echo "date=$(date +'%d-%m-%y')" >> $GITHUB_OUTPUT
+            echo "date_safe=$(date +'%d-%m-%y')" >> $GITHUB_OUTPUT
           else
             echo "date=${{ github.event.inputs.date }}" >> $GITHUB_OUTPUT
+            echo "date_safe=$(echo '${{ github.event.inputs.date }}' | tr ':' '_')" >> $GITHUB_OUTPUT
           fi
 
       - name: Run Slack alarm analyzer
@@ -67,5 +69,5 @@ jobs:
       - name: Upload reports as artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: alarm-reports-${{ inputs.product }}-${{ inputs.environment }}-${{ steps.set_date.outputs.date }}
+          name: alarm-reports-${{ inputs.product }}-${{ inputs.environment }}-${{ steps.set_date.outputs.date_safe }}
           path: reports/
