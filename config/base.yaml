@@ -19,6 +19,10 @@ products:
       ignore:
         - name: "AWS Notification Message"
           path: "files.name"
+
+        - name: "pn-Confinfo-SMS-MonthToDateSpentUSD"
+          path: "attachments.title.alarm_name"
+          reason: "ALARM: pn-Confinfo-SMS-MonthToDateSpentUSD. L'allarme riguarda le spese mensili in sms e viene monitorato direttamente dal gruppo Infra. Thread Slack: https://pagopaspa.slack.com/archives/C087KRMD16E/p1761312793655509Connect"
         # List of alarms to be ignored/filtered out from notifications
         # Each entry can specify:
         # - name: exact alarm name or pattern

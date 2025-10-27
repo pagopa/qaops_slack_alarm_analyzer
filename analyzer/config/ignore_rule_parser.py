@@ -7,6 +7,10 @@ from typing import List, Dict, Any, Tuple
 from .ignore_rule import IgnoreRule
 from typing import List
 
+# Regex pattern for extracting alarm name from SEND alarm titles
+# Format: "#45533: ALARM: \"AlarmName\" in Location"
+SEND_ALARM_PATTERN = re.compile(r'#\d+: ALARM: "([^"]+)" in .+')
+
 
 class IgnoreRuleParser:
     """Parser class for evaluating message ignore rules with field paths."""
@@ -89,7 +93,11 @@ class IgnoreRuleParser:
         return False
 
     def _extract_values_by_path(self, path: str, message: Dict[str, Any]) -> List[str]:
-        """Extract values from message based on field path."""
+        """Extract values from message based on field path.
+
+        Special paths:
+        - attachments.title.alarm_name: Extracts alarm name from SEND alarm title format
+        """
         values = []
         path_parts = path.split('.')
 
@@ -98,7 +106,17 @@ class IgnoreRuleParser:
 
         elif path_parts[0] == "attachments":
             attachments = message.get('attachments', [])
-            if len(path_parts) == 2:
+
+            # Special handling for alarm_name extraction
+            if len(path_parts) == 3 and path_parts[1] == "title" and path_parts[2] == "alarm_name":
+                # Extract alarm name from SEND alarm title format
+                for attachment in attachments:
+                    title = attachment.get('title', '')
+                    alarm_name = self._extract_alarm_name_from_title(title)
+                    if alarm_name:
+                        values.append(alarm_name)
+
+            elif len(path_parts) == 2:
                 field = path_parts[1]
                 for attachment in attachments:
                     values.append(attachment.get(field, ''))
@@ -111,6 +129,20 @@ class IgnoreRuleParser:
                     values.append(file_info.get(field, ''))
 
         return values
+
+    def _extract_alarm_name_from_title(self, title: str) -> str:
+        """Extract alarm name from SEND alarm title format.
+
+        Format: "#45533: ALARM: \"AlarmName\" in Location"
+        Returns: "AlarmName" or empty string if not found
+        """
+        if not title:
+            return ""
+
+        match = SEND_ALARM_PATTERN.search(title)
+        if match:
+            return match.group(1)  # Group 1 is the alarm name
+        return ""
 
     def _contains_pattern(self, pattern: str, text: str) -> bool:
         """Check if text contains the pattern (case-insensitive)."""
