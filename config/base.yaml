@@ -23,6 +23,31 @@ products:
         - name: "pn-Confinfo-SMS-MonthToDateSpentUSD"
           path: "attachments.title.alarm_name"
           reason: "ALARM: pn-Confinfo-SMS-MonthToDateSpentUSD. L'allarme riguarda le spese mensili in sms e viene monitorato direttamente dal gruppo Infra. Thread Slack: https://pagopaspa.slack.com/archives/C087KRMD16E/p1761312793655509Connect"
+          
+        - name: "pn-bff-WEB-payment-comp-5xx-ApiGwAlarm"
+          path: "attachments.title.alarm_name"
+          reason: "SEND contatto l'ente creditore per avere informazioni sul pagamento e per farlo passa anche per il downstream PagoPA: Il cittadino accede alla pagina di pagamento -> SEND invoca PagoPA -> PagoPA invoca l'ente mittente pertanto la responsabilità dei 500 è del servizio PagoPA e non di SEND"
+        
+        - name: "pn-web-logout-api-ErrorAlarm"
+          path: "attachments.title.alarm_name"
+          reason: "Fino al prossimo rilascio in prod  (6 novembre 2025) Piattaforma Notifiche: GA25Q4.A - Jira"
+
+        - name: "workday-SLAViolations-SendPaperAr890-Alarm"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi scattano ogni giorno alle  3.00 UTC. Si tratta di allarmi periodici ed eventuali problemi associati alle metriche che misurano vengono verificati la mattina poco prima dello SU di Send. Nello specifico bisogna assicurarsi che: il numero di SLA di validazione in Violazione sia pari a 0; il numero di SLA SendPec non superi 4; Gli altri valori possono essere ignorati"
+          
+        - name: "workday-SLAViolations-Refinement-Alarm"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi scattano ogni giorno alle  3.00 UTC. Si tratta di allarmi periodici ed eventuali problemi associati alle metriche che misurano vengono verificati la mattina poco prima dello SU di Send. Nello specifico bisogna assicurarsi che: il numero di SLA di validazione in Violazione sia pari a 0; il numero di SLA SendPec non superi 4; Gli altri valori possono essere ignorati"
+          
+        - name: "workday-SLAViolations-SendAmr-Alarm"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi scattano ogni giorno alle  3.00 UTC. Si tratta di allarmi periodici ed eventuali problemi associati alle metriche che misurano vengono verificati la mattina poco prima dello SU di Send. Nello specifico bisogna assicurarsi che: il numero di SLA di validazione in Violazione sia pari a 0; il numero di SLA SendPec non superi 4; Gli altri valori possono essere ignorati"
+          
+        - name: "workday-SLAViolations-SendPec-Alarm"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi scattano ogni giorno alle  3.00 UTC. Si tratta di allarmi periodici ed eventuali problemi associati alle metriche che misurano vengono verificati la mattina poco prima dello SU di Send. Nello specifico bisogna assicurarsi che: il numero di SLA di validazione in Violazione sia pari a 0; il numero di SLA SendPec non superi 4; Gli altri valori possono essere ignorati"
+          
         # List of alarms to be ignored/filtered out from notifications
         # Each entry can specify:
         # - name: exact alarm name or pattern
