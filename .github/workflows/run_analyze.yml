@@ -23,6 +23,8 @@ on:
         options:
           - prod
           - test
+          - att
+          - catalog
       report_formats:
         description: 'Report formats (comma-separated: html,pdf,csv,json)'
         required: false
