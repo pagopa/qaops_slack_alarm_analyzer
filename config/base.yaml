@@ -77,12 +77,17 @@ products:
     # Environment-specific Slack channel configuration for INTEROP product
     envs:
       prod:
-        # Production environment Slack channel ID for INTEROP product alerts
+        # Production environment
         slack_channel_id: "C0472QPG5D2"
       test:
-        # Test environment - empty string indicates no Slack notifications
-        # Alerts for this environment will be processed but not sent to Slack
-        slack_channel_id: ""
+        # Test environment 
+        slack_channel_id: "C04708Y1QP5"
+      att:
+        # Attestazione
+        slack_channel_id: "C06LQ7Y8B17"
+      catalog:
+        # Attestazione
+        slack_channel_id: "C09RVCSL4BS"
 
     # Alarm filtering and ignore rules configuration for INTEROP
     alarms:
