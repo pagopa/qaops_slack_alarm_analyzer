@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Any
 from .environment_config import EnvironmentConfig
 from .product_config import ProductConfig
 from .ignore_rule import IgnoreRule
+from .time_constraint import TimeConstraint
 
 
 class ConfigReader:
@@ -70,12 +71,38 @@ class ConfigReader:
                     environments_list = rule_data.get('environments', [])
                     reason = rule_data.get('reason', None)
 
+                    # Parse validity constraint (unified structure)
+                    validity = None
+                    validity_data = rule_data.get('validity', {})
+                    if validity_data:
+                        try:
+                            periods = validity_data.get('periods', [])
+                            weekdays = validity_data.get('weekdays', [])
+                            hours = validity_data.get('hours', [])
+                            validity = TimeConstraint(periods=periods, weekdays=weekdays, hours=hours)
+                        except ValueError as e:
+                            print(f"Warning: Invalid validity constraint in rule '{name}': {e}")
+
+                    # Parse exclusions constraint (inverse of validity)
+                    exclusions = None
+                    exclusions_data = rule_data.get('exclusions', {})
+                    if exclusions_data:
+                        try:
+                            periods = exclusions_data.get('periods', [])
+                            weekdays = exclusions_data.get('weekdays', [])
+                            hours = exclusions_data.get('hours', [])
+                            exclusions = TimeConstraint(periods=periods, weekdays=weekdays, hours=hours)
+                        except ValueError as e:
+                            print(f"Warning: Invalid exclusions constraint in rule '{name}': {e}")
+
                     if name:  # Only create rule if name is provided
                         ignore_rule = IgnoreRule(
                             pattern=name,
                             path=path,
                             environments=environments_list,
-                            reason=reason
+                            reason=reason,
+                            validity=validity,
+                            exclusions=exclusions
                         )
                         ignore_rules.append(ignore_rule)
 
