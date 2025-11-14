@@ -20,7 +20,7 @@ def get_report_filepath(params: AnalyzerParams):
 class HtmlReporter:
     """HTML report generator using Jinja2 templates."""
 
-    def generate_report(self, alarm_stats: Dict[str, Any], total_alarms: int, analyzer_params: AnalyzerParams, ignored_messages: List[Dict[str, Any]]) -> str:
+    def generate_report(self, alarm_stats: Dict[str, Any], analyzed_alarms: int, total_alarms: int, analyzer_params: AnalyzerParams, ignored_messages: List[Dict[str, Any]]) -> str:
         """Generate HTML report using Jinja2 template."""
         # Setup Jinja2 environment
         template_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -67,6 +67,8 @@ class HtmlReporter:
             product=analyzer_params.product,
             environment_upper=analyzer_params.environment_upper,
             total_alarms=total_alarms,
+            analyzed_alarms=analyzed_alarms,
+            ignored_count=len(ignored_messages) if ignored_messages else 0,
             alarm_stats_sorted=alarm_stats_sorted,
             ignored_messages=ignored_messages
         )

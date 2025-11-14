@@ -34,6 +34,55 @@
             margin: 20px 0;
             border-left: 4px solid #007acc;
         }
+        .statistics-box {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background-color: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .stat-card.total {
+            border-color: #4a90e2;
+        }
+        .stat-card.ignored {
+            border-color: #ffa500;
+        }
+        .stat-card.analyzed {
+            border-color: #28a745;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-card.total .stat-value {
+            color: #4a90e2;
+        }
+        .stat-card.ignored .stat-value {
+            color: #ffa500;
+        }
+        .stat-card.analyzed .stat-value {
+            color: #28a745;
+        }
+        .stat-description {
+            font-size: 12px;
+            color: #888;
+            margin-top: 8px;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -86,18 +135,28 @@
         <h1>🚨 Alarm Report - {{ date_str }} - {{ product }} - {{ environment_upper }}</h1>
 
         <div class="summary">
-            <strong>Summary:</strong>
-            {% if total_alarms == 0 %}
-                No alarm messages found for {{ date_str }}
-            {% else %}
-                Found <strong>{{ total_alarms }}</strong> alarm messages
-                {% if ignored_messages and ignored_messages|length > 0 %}
-                    and ignored <strong>{{ ignored_messages|length }}</strong> messages
-                {% endif %}
-            {% endif %}
+            <strong>Analysis Summary:</strong> This report analyzes Slack alarm messages for the specified date range, filtering and categorizing them for review.
         </div>
 
-        {% if total_alarms > 0 %}
+        <div class="statistics-box">
+            <div class="stat-card total">
+                <div class="stat-label">Total Alarms Found</div>
+                <div class="stat-value">{{ total_alarms }}</div>
+                <div class="stat-description">All alarm messages parsed</div>
+            </div>
+            <div class="stat-card ignored">
+                <div class="stat-label">Alarms Ignored</div>
+                <div class="stat-value">{{ ignored_count }}</div>
+                <div class="stat-description">Filtered by ignore rules</div>
+            </div>
+            <div class="stat-card analyzed">
+                <div class="stat-label">Alarms Analyzed</div>
+                <div class="stat-value">{{ analyzed_alarms }}</div>
+                <div class="stat-description">Total - Ignored = {{ analyzed_alarms }}</div>
+            </div>
+        </div>
+
+        {% if analyzed_alarms > 0 %}
             <h2>Alarm Statistics Summary</h2>
             <table>
                 <thead>

@@ -17,13 +17,14 @@ class PdfReporter:
     def generate_report(
         self,
         alarm_stats: Dict[str, Any],
+        analyzed_alarms: int,
         total_alarms: int,
         analyzer_params: AnalyzerParams,
         ignored_messages: List[Dict[str, Any]]
     ) -> str:
         # First generate HTML content using existing HTML reporter
         with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as temp_html:
-            html_content = self._generate_html_content(alarm_stats, total_alarms, analyzer_params, ignored_messages)
+            html_content = self._generate_html_content(alarm_stats, analyzed_alarms, total_alarms, analyzer_params, ignored_messages)
             temp_html.write(html_content)
             temp_html_path = temp_html.name
 
@@ -40,6 +41,7 @@ class PdfReporter:
     def _generate_html_content(
         self,
         alarm_stats: Dict[str, Any],
+        analyzed_alarms: int,
         total_alarms: int,
         analyzer_params: AnalyzerParams,
         ignored_messages: List[Dict[str, Any]]
@@ -89,6 +91,8 @@ class PdfReporter:
             product=analyzer_params.product,
             environment_upper=analyzer_params.environment_upper,
             total_alarms=total_alarms,
+            analyzed_alarms=analyzed_alarms,
+            ignored_count=len(ignored_messages) if ignored_messages else 0,
             alarm_stats_sorted=alarm_stats_sorted,
             ignored_messages=ignored_messages
         )

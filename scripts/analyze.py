@@ -147,8 +147,13 @@ def main():
         print(f"Network or HTTP error: {e}")
         sys.exit(1)
 
-    alarm_stats, total_alarms, ignored_messages = analyze_alarms(messages, analyzer_params)
-    print(f"Total alarm messages: {total_alarms}")
+    alarm_stats, analyzed_alarms, total_alarms, ignored_messages = analyze_alarms(messages, analyzer_params)
+
+    # Print statistics
+    print(f"\n=== Alarm Statistics ===")
+    print(f"Total alarms found:      {total_alarms}")
+    print(f"Alarms ignored:          {len(ignored_messages)}")
+    print(f"Alarms analyzed:         {analyzed_alarms}")
 
     # Generate reports based on requested formats
     for format_name in report_formats:
@@ -163,7 +168,7 @@ def main():
 
             # Instantiate and generate report
             reporter = reporter_class()
-            report_path = reporter.generate_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
+            report_path = reporter.generate_report(alarm_stats, analyzed_alarms, total_alarms, analyzer_params, ignored_messages)
             print(f"{format_name.upper()} report generated at: {report_path}")
 
         except ImportError as e:

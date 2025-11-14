@@ -69,9 +69,18 @@ def extract_alarm_info_interop(message):
     }
 
 def analyze_alarms(messages, params: AnalyzerParams):
-    """Analyze alarm messages and aggregate by alarm name."""
+    """
+    Analyze alarm messages and aggregate by alarm name.
+
+    Returns:
+        tuple: (alarm_stats, analyzed_alarms, total_alarms, ignored_messages)
+            - alarm_stats: dict of alarm name -> list of alarm info
+            - analyzed_alarms: count of alarms analyzed (total - ignored)
+            - total_alarms: total count of ALARM messages found (includes ignored)
+            - ignored_messages: list of ignored alarm info
+    """
     alarm_stats = defaultdict(list)
-    total_alarms = 0
+    total_alarms = 0  # Total count of ALARM messages (both analyzed and ignored)
     ignored_messages = []
 
     # Get ignore rules from the product configuration passed in params
@@ -86,19 +95,26 @@ def analyze_alarms(messages, params: AnalyzerParams):
         raise ValueError(f"No parser available for product '{params.product}' environment '{params.environment}'")
 
     for message in messages:
-        # Check if message should be ignored (pass environment for context)
-        if ignore_rule_parser.should_ignore_message(message, params.environment):
-            ignored_info = create_ignored_message_info(message, ignore_rule_parser)
-            ignored_messages.append(ignored_info)
-            continue
-
+        # First, try to parse the message as an alarm
         alarm_info = slack_parser.extract_alarm_info(message)
-        if alarm_info:
-            total_alarms += 1
-            alarm_stats[alarm_info['name']].append(alarm_info)
 
-    print(f"Ignored {len(ignored_messages)} messages based on ignore patterns")
-    return alarm_stats, total_alarms, ignored_messages
+        # Only process if it's an alarm message
+        if alarm_info:
+            total_alarms += 1  # Count all alarms (both ignored and analyzed)
+
+            # Check if this alarm should be ignored
+            if ignore_rule_parser.should_ignore_message(message, params.environment):
+                ignored_info = create_ignored_message_info(message, ignore_rule_parser)
+                ignored_messages.append(ignored_info)
+            else:
+                # This alarm should be analyzed
+                alarm_stats[alarm_info['name']].append(alarm_info)
+
+    # Calculate analyzed alarms = total alarms - ignored alarms
+    analyzed_alarms = total_alarms - len(ignored_messages)
+
+    print(f"Ignored {len(ignored_messages)} alarm messages based on ignore patterns")
+    return alarm_stats, analyzed_alarms, total_alarms, ignored_messages
 
 def print_hourly_distribution(timestamps):
     """Print a 24-hour distribution of timestamps."""

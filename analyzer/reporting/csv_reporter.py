@@ -22,6 +22,7 @@ class CsvReporter:
     def generate_report(
         self,
         alarm_stats: Dict[str, Any],
+        analyzed_alarms: int,
         total_alarms: int,
         analyzer_params: AnalyzerParams,
         ignored_messages: List[Dict[str, Any]]
@@ -31,7 +32,8 @@ class CsvReporter:
 
         Args:
             alarm_stats: Dictionary containing alarm statistics
-            total_alarms: Total number of alarm messages
+            analyzed_alarms: Number of analyzed alarm messages (excludes ignored)
+            total_alarms: Total number of alarm messages found (includes ignored)
             analyzer_params: Analysis parameters containing configuration
             ignored_messages: List of messages that were ignored
 
@@ -47,7 +49,7 @@ class CsvReporter:
             print(f"Ignored messages CSV generated at: {ignored_csv_path}")
 
         # Generate summary CSV with overall statistics
-        summary_csv_path = self._generate_summary_csv(alarm_stats, total_alarms, ignored_messages, analyzer_params)
+        summary_csv_path = self._generate_summary_csv(alarm_stats, analyzed_alarms, total_alarms, ignored_messages, analyzer_params)
         print(f"Summary CSV generated at: {summary_csv_path}")
 
         return alarm_csv_path
@@ -175,6 +177,7 @@ class CsvReporter:
     def _generate_summary_csv(
         self,
         alarm_stats: Dict[str, Any],
+        analyzed_alarms: int,
         total_alarms: int,
         ignored_messages: List[Dict[str, Any]],
         analyzer_params: AnalyzerParams
@@ -204,7 +207,7 @@ class CsvReporter:
                 most_frequent_count = len(sorted_alarms[0][1]) if sorted_alarms else 0
 
                 # Calculate average alarms per type
-                avg_alarms_per_type = total_alarms / unique_alarms if unique_alarms > 0 else 0
+                avg_alarms_per_type = analyzed_alarms / unique_alarms if unique_alarms > 0 else 0
 
                 # Find peak hour across all alarms
                 all_timestamps = []
@@ -224,9 +227,10 @@ class CsvReporter:
 
             # Write summary rows
             summary_data = [
-                ('total_alarms', total_alarms, 'Total number of alarm messages'),
+                ('total_alarms', total_alarms, 'Total number of alarm messages found (including ignored)'),
+                ('analyzed_alarms', analyzed_alarms, 'Number of alarm messages analyzed (excluding ignored)'),
+                ('ignored_alarms', ignored_count, 'Number of alarm messages ignored'),
                 ('unique_alarm_types', unique_alarms, 'Number of different alarm types'),
-                ('ignored_messages', ignored_count, 'Number of ignored messages'),
                 ('most_frequent_alarm', most_frequent_alarm, 'Alarm type with highest occurrence count'),
                 ('most_frequent_count', most_frequent_count, 'Occurrence count of most frequent alarm'),
                 ('avg_alarms_per_type', f"{avg_alarms_per_type:.2f}", 'Average alarms per alarm type'),
