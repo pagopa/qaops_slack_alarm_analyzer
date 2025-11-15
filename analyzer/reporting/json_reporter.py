@@ -12,6 +12,23 @@ from ..duration_params import DurationParams
 from .reporter import Reporter
 
 
+def group_ignored_messages_by_name(ignored_messages: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Group ignored messages by alarm name and aggregate information."""
+    from collections import defaultdict
+    grouped = defaultdict(lambda: {'count': 0, 'reason': '', 'occurrences': []})
+
+    for ignored in ignored_messages:
+        alarm_name = ignored.get('name', 'Unknown')
+        grouped[alarm_name]['count'] += 1
+        grouped[alarm_name]['reason'] = ignored.get('reason', 'No reason provided')
+        grouped[alarm_name]['occurrences'].append({
+            'id': ignored.get('id', 'N/A'),
+            'timestamp': ignored.get('timestamp')
+        })
+
+    return dict(grouped)
+
+
 class JsonReporter:
     """JSON report generator that exports alarm data to JSON format."""
 
@@ -40,13 +57,16 @@ class JsonReporter:
         Returns:
             str: Path to the generated JSON file
         """
+        # Group ignored messages by name
+        ignored_grouped = group_ignored_messages_by_name(ignored_messages) if ignored_messages else {}
+
         # Build comprehensive JSON structure
         report_data = {
             "metadata": self._generate_metadata(analyzer_params, analyzed_alarms, total_alarms, ignored_messages),
             "summary": self._generate_summary_statistics(alarm_stats, analyzed_alarms, total_alarms, ignored_messages, analyzer_params),
             "alarm_statistics": self._generate_alarm_statistics(alarm_stats),
             "hourly_analysis": self._generate_hourly_analysis(alarm_stats),
-            "ignored_messages": self._generate_ignored_messages_data(ignored_messages),
+            "ignored_alarms": self._generate_ignored_alarms_data(ignored_grouped),
             "raw_data": self._generate_raw_data(alarm_stats, ignored_messages)
         }
 
@@ -253,37 +273,39 @@ class JsonReporter:
             "average_per_hour": round(average_count, 2)
         }
 
-    def _generate_ignored_messages_data(self, ignored_messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Generate ignored messages section."""
-        if not ignored_messages:
+    def _generate_ignored_alarms_data(self, ignored_grouped: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate ignored alarms section grouped by alarm name."""
+        if not ignored_grouped:
             return []
 
         ignored_data = []
-        for ignored in ignored_messages:
-            # Categorize message type
-            message_type = "unknown"
-            if ignored.get('file_name'):
-                message_type = "file_attachment"
-            elif ignored.get('text'):
-                message_type = "text_message"
-            elif ignored.get('title'):
-                message_type = "titled_message"
+        # Sort by count (descending)
+        sorted_ignored = sorted(ignored_grouped.items(), key=lambda x: x[1]['count'], reverse=True)
+
+        for alarm_name, alarm_data in sorted_ignored:
+            occurrences = alarm_data['occurrences']
+            timestamps = [occ['timestamp'] for occ in occurrences if occ.get('timestamp')]
+
+            # Calculate timing statistics
+            first_occurrence = min(timestamps) if timestamps else None
+            last_occurrence = max(timestamps) if timestamps else None
+
+            # Format occurrences for JSON
+            formatted_occurrences = []
+            for occ in occurrences:
+                formatted_occurrences.append({
+                    'id': occ['id'],
+                    'timestamp': occ['timestamp'],
+                    'formatted_time': occ['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if occ.get('timestamp') else None
+                })
 
             ignored_item = {
-                "timestamp": ignored.get('timestamp'),
-                "reason": ignored.get('reason', 'No reason provided'),
-                "message_type": message_type,
-                "content": {
-                    "text": ignored.get('text'),
-                    "title": ignored.get('title'),
-                    "fallback": ignored.get('fallback'),
-                    "file_name": ignored.get('file_name'),
-                    "file_text": ignored.get('file_text')
-                },
-                "content_length": {
-                    "text": len(ignored.get('text', '')),
-                    "file_text": len(ignored.get('file_text', ''))
-                }
+                "alarm_name": alarm_name,
+                "count": alarm_data['count'],
+                "reason": alarm_data['reason'],
+                "first_occurrence": first_occurrence,
+                "last_occurrence": last_occurrence,
+                "occurrences": formatted_occurrences
             }
 
             ignored_data.append(ignored_item)

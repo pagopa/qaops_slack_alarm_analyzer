@@ -20,6 +20,14 @@ products:
         - name: "AWS Notification Message"
           path: "files.name"
 
+        - name: "pn-delivery-versioning-v1v21-sendnewnotification-lambda-LogInvocationError"
+          path: "attachments.title.alarm_name"
+          reason: "L'analisi dell'allarme non aggiunge nulla di rilevante rispetto all'analisi del contemporaneo pn-delivery-B2B-ApiGwAlarm"
+                 
+        - name: "pn-delivery-versioning-v1v2-getnotification-lambda-LogInvocationErrors-Alarm"
+          path: "attachments.title.alarm_name"
+          reason: "L'analisi dell'allarme non aggiunge nulla di rilevante rispetto all'analisi del contemporaneo pn-delivery-B2B-ApiGwAlarm"
+          
         - name: "pn-Confinfo-SMS-MonthToDateSpentUSD"
           path: "attachments.title.alarm_name"
           reason: "ALARM: pn-Confinfo-SMS-MonthToDateSpentUSD. L'allarme riguarda le spese mensili in sms e viene monitorato direttamente dal gruppo Infra. Thread Slack: https://pagopaspa.slack.com/archives/C087KRMD16E/p1761312793655509Connect"
@@ -103,6 +111,15 @@ products:
         - name: "pn-ss-transformation-raster-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+
+        - name: "pn-ss-transformation-sign-and-timemark-queue-DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+
+        - name: "pn-safestore_to_deliverypush-DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+
 
         # JWKS Cache Refresh Lambda Errors
         - name: "pn-jwksCacheRefreshLambda-LogInvocationErrors-Alarm"

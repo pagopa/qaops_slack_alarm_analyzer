@@ -170,6 +170,16 @@ class IgnoreRuleParser:
             return False
         return pattern.lower() in text.lower()
 
+    def get_matched_rule(self, message: Dict[str, Any], environment: str = None, check_datetime: datetime = None) -> Optional[IgnoreRule]:
+        """Get the rule that matches this message, or None if no match."""
+        if check_datetime is None:
+            check_datetime = datetime.now()
+
+        for rule in self.ignore_rules:
+            if self._rule_matches_message(rule, message, environment, check_datetime):
+                return rule
+        return None
+
     def get_ignore_reason(self, message: Dict[str, Any], environment: str = None, check_datetime: datetime = None) -> str:
         """Get the reason why a message was ignored."""
         if check_datetime is None:
