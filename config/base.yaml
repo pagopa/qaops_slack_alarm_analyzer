@@ -40,7 +40,8 @@ products:
           path: "attachments.title.alarm_name"
           # validity:
           #   periods:
-          #     - end: "2025-11-06"
+          #     - start: "2025-09-30"
+          #       end: "2025-11-06"
           reason: "Fino al prossimo rilascio in prod  (6 novembre 2025) Piattaforma Notifiche: GA25Q4.A - Jira"
 
         - name: "workday-SLAViolations-SendPaperAr890-Alarm"
@@ -190,6 +191,16 @@ products:
         # Per più esempi, vedere: config/ignore_rules_examples_v2.yaml
         # Per documentazione completa: docs/IGNORE_RULES_GUIDE.md
 
+      # OnCall alarms configuration
+      # OnCall alarms are urgent alarms that require immediate attention
+      # If triggered outside office hours (9-18 Italy time), they trigger on-call duty
+      oncall:
+        # Slack channel ID where oncall alarms are posted (same as prod for SEND)
+        channel_id: "C0585442Z39"
+        # Regex pattern to identify oncall alarms in alarm names
+        # For SEND: alarms with "oncall" prefix (case insensitive)
+        pattern: "^oncall"
+
   # INTEROP Product Configuration
   INTEROP:
     # Environment-specific Slack channel configuration for INTEROP product
@@ -212,3 +223,14 @@ products:
       ignore:
         - name: "AWS Notification Message"
           path: "files.name"
+
+      # OnCall alarms configuration for INTEROP
+      # OnCall alarms are urgent alarms that require immediate attention
+      # For INTEROP, oncall messages are posted to a dedicated Slack channel
+      oncall:
+        # Dedicated Slack channel ID for INTEROP oncall alarms
+        # TODO: Replace with actual dedicated oncall channel ID
+        channel_id: "C05G8LFEUAF"  # Currently set to prod channel - update with dedicated oncall channel
+        # Regex pattern to identify oncall alarms in alarm names
+        # For INTEROP: alarms with "on-call" prefix (case insensitive)
+        pattern: "^on-call"

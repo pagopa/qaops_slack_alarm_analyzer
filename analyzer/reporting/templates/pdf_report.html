@@ -271,32 +271,39 @@
     <div class="container">
         <h1>🚨 Alarm Report - {{ date_str }} - {{ product }} - {{ environment_upper }}</h1>
 
-        <div class="summary">
-            <strong>Analysis Summary:</strong> This report analyzes Slack alarm messages for the specified date range,
-            filtering and categorizing them for review.
-        </div>
-
         <div class="statistics-box">
             <div class="stat-row">
-                <div class="stat-card total">
+                <div class="stat-card total" style="width: {% if oncall_total > 0 %}20%{% else %}33.33%{% endif %};">
                     <div class="stat-label">Total Alarms Found</div>
                     <div class="stat-value">{{ total_alarms }}</div>
-                    <div class="stat-description">All alarm messages parsed</div>
+                    <div class="stat-description">All messages parsed</div>
                 </div>
-                <div class="stat-card ignored">
+                <div class="stat-card ignored" style="width: {% if oncall_total > 0 %}20%{% else %}33.33%{% endif %};">
                     <div class="stat-label">Alarms Ignored</div>
                     <div class="stat-value">{{ ignored_count }}</div>
-                    <div class="stat-description">Filtered by ignore rules</div>
+                    <div class="stat-description">Filtered by rules</div>
                 </div>
-                <div class="stat-card analyzed">
-                    <div class="stat-label">Alarms Analyzed</div>
-                    <div class="stat-value">{{ analyzed_alarms }}</div>
-                    <div class="stat-description">Total - Ignored = {{ analyzed_alarms }}</div>
+                <div class="stat-card analyzed" style="width: {% if oncall_total > 0 %}20%{% else %}33.33%{% endif %};">
+                    <div class="stat-label">Alarms Analyzable</div>
+                    <div class="stat-value">{{ analyzable_alarms }}</div>
+                    <div class="stat-description">Total - Ignored</div>
                 </div>
+                {% if oncall_total > 0 %}
+                <div class="stat-card" style="border-color: #ff6b6b; border-width: 1.5pt; width: 20%;">
+                    <div class="stat-label">Total OnCall</div>
+                    <div class="stat-value" style="color: #ff6b6b;">{{ oncall_total }}</div>
+                    <div class="stat-description">Urgent alarms</div>
+                </div>
+                <div class="stat-card" style="border-color: #ee5a24; border-width: 1.5pt; width: 20%;">
+                    <div class="stat-label">OnCall Reperibilità</div>
+                    <div class="stat-value" style="color: #ee5a24;">{{ oncall_in_reperibilita }}</div>
+                    <div class="stat-description">Outside 9-18 Italy</div>
+                </div>
+                {% endif %}
             </div>
         </div>
 
-        {% if analyzed_alarms > 0 %}
+        {% if analyzable_alarms > 0 %}
         <h2>Alarm Statistics Summary</h2>
         <table>
             <thead>

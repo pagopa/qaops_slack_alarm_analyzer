@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 
 from .environment_config import EnvironmentConfig
 from .ignore_rule import IgnoreRule
+from .oncall_config import OnCallConfiguration
 
 
 @dataclass
@@ -14,6 +15,7 @@ class ProductConfig:
     name: str
     environments: Dict[str, EnvironmentConfig]
     ignore_rules: List[IgnoreRule]
+    oncall_config: Optional[OnCallConfiguration] = None
 
     def get_environment_config(self, env_name: str) -> Optional[EnvironmentConfig]:
         """Get configuration for a specific environment."""

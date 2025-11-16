@@ -9,6 +9,7 @@ from .environment_config import EnvironmentConfig
 from .product_config import ProductConfig
 from .ignore_rule import IgnoreRule
 from .time_constraint import TimeConstraint
+from .oncall_config import OnCallConfiguration
 
 
 class ConfigReader:
@@ -106,11 +107,24 @@ class ConfigReader:
                         )
                         ignore_rules.append(ignore_rule)
 
+            # Parse oncall configuration
+            oncall_config = None
+            oncall_data = alarms_data.get('oncall', {})
+            if oncall_data:
+                channel_id = oncall_data.get('channel_id', '')
+                pattern = oncall_data.get('pattern', '')
+                if channel_id and pattern:
+                    oncall_config = OnCallConfiguration(
+                        channel_id=channel_id,
+                        pattern=pattern
+                    )
+
             # Create product configuration
             self._products[product_name] = ProductConfig(
                 name=product_name,
                 environments=environments,
-                ignore_rules=ignore_rules
+                ignore_rules=ignore_rules,
+                oncall_config=oncall_config
             )
 
     def get_product_config(self, product_name: str) -> Optional[ProductConfig]:

@@ -39,17 +39,19 @@ class JsonReporter:
     def generate_report(
         self,
         alarm_stats: Dict[str, Any],
-        analyzed_alarms: int,
+        analyzable_alarms: int,
         total_alarms: int,
         analyzer_params: AnalyzerParams,
-        ignored_messages: List[Dict[str, Any]]
+        ignored_messages: List[Dict[str, Any]],
+        oncall_total: int = 0,
+        oncall_in_reperibilita: int = 0
     ) -> str:
         """
         Generate comprehensive JSON report with all alarm data.
 
         Args:
             alarm_stats: Dictionary containing alarm statistics
-            analyzed_alarms: Number of analyzed alarm messages (excludes ignored)
+            analyzable_alarms: Number of analyzable alarm messages (excludes ignored)
             total_alarms: Total number of alarm messages found (includes ignored)
             analyzer_params: Analysis parameters containing configuration
             ignored_messages: List of messages that were ignored
@@ -62,8 +64,8 @@ class JsonReporter:
 
         # Build comprehensive JSON structure
         report_data = {
-            "metadata": self._generate_metadata(analyzer_params, analyzed_alarms, total_alarms, ignored_messages),
-            "summary": self._generate_summary_statistics(alarm_stats, analyzed_alarms, total_alarms, ignored_messages, analyzer_params),
+            "metadata": self._generate_metadata(analyzer_params, analyzable_alarms, total_alarms, ignored_messages),
+            "summary": self._generate_summary_statistics(alarm_stats, analyzable_alarms, total_alarms, ignored_messages, analyzer_params),
             "alarm_statistics": self._generate_alarm_statistics(alarm_stats),
             "hourly_analysis": self._generate_hourly_analysis(alarm_stats),
             "ignored_alarms": self._generate_ignored_alarms_data(ignored_grouped),
@@ -80,7 +82,7 @@ class JsonReporter:
     def _generate_metadata(
         self,
         analyzer_params: AnalyzerParams,
-        analyzed_alarms: int,
+        analyzable_alarms: int,
         total_alarms: int,
         ignored_messages: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
@@ -91,7 +93,7 @@ class JsonReporter:
             "product": analyzer_params.product,
             "environment": analyzer_params.environment,
             "total_alarms": total_alarms,
-            "analyzed_alarms": analyzed_alarms,
+            "analyzable_alarms": analyzable_alarms,
             "ignored_alarms": len(ignored_messages) if ignored_messages else 0,
             "report_version": "1.0",
             "generator": "QAOps Slack Alarm Analyzer - JsonReporter"
@@ -100,7 +102,7 @@ class JsonReporter:
     def _generate_summary_statistics(
         self,
         alarm_stats: Dict[str, Any],
-        analyzed_alarms: int,
+        analyzable_alarms: int,
         total_alarms: int,
         ignored_messages: List[Dict[str, Any]],
         analyzer_params: AnalyzerParams
@@ -110,7 +112,7 @@ class JsonReporter:
             return {
                 "unique_alarm_types": 0,
                 "total_alarms": total_alarms,
-                "analyzed_alarms": analyzed_alarms,
+                "analyzable_alarms": analyzable_alarms,
                 "ignored_alarms": len(ignored_messages) if ignored_messages else 0,
                 "most_frequent_alarm": None,
                 "least_frequent_alarm": None,
@@ -133,7 +135,7 @@ class JsonReporter:
             "count": len(sorted_alarms[-1][1])
         } if sorted_alarms else None
 
-        avg_alarms_per_type = analyzed_alarms / unique_alarms if unique_alarms > 0 else 0
+        avg_alarms_per_type = analyzable_alarms / unique_alarms if unique_alarms > 0 else 0
 
         # Calculate hourly statistics
         all_timestamps = []
@@ -156,7 +158,7 @@ class JsonReporter:
         return {
             "unique_alarm_types": unique_alarms,
             "total_alarms": total_alarms,
-            "analyzed_alarms": analyzed_alarms,
+            "analyzable_alarms": analyzable_alarms,
             "ignored_alarms": len(ignored_messages) if ignored_messages else 0,
             "most_frequent_alarm": most_frequent_alarm,
             "least_frequent_alarm": least_frequent_alarm,

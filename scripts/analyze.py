@@ -140,6 +140,7 @@ def main():
 
     try:
         messages = fetch_slack_messages(slack_channel_id, bot_token, oldest, latest)
+        print(f"Fetched {len(messages)} messages from main channel")
     except SlackAPIError as e:
         print(f"Slack API error: {e}")
         sys.exit(1)
@@ -147,13 +148,50 @@ def main():
         print(f"Network or HTTP error: {e}")
         sys.exit(1)
 
-    alarm_stats, analyzed_alarms, total_alarms, ignored_messages = analyze_alarms(messages, analyzer_params)
+    # If environment is prod and oncall channel is different, fetch from oncall channel too
+    if environment == 'prod' and product_config.oncall_config:
+        oncall_channel_id = product_config.oncall_config.channel_id
+        if oncall_channel_id and oncall_channel_id != slack_channel_id:
+            print(f"\nOnCall dedicated channel detected: {oncall_channel_id}")
+            print(f"Fetching additional oncall messages...")
+            try:
+                from analyzer.slack.parser_provider import SlackMessageParserProvider
+
+                oncall_messages_raw = fetch_slack_messages(oncall_channel_id, bot_token, oldest, latest)
+                print(f"Fetched {len(oncall_messages_raw)} raw messages from oncall channel")
+
+                # Filter oncall messages: extract only alarm messages that match oncall pattern
+                parser_provider = SlackMessageParserProvider()
+                oncall_parser = parser_provider.get_parser(product, environment, product_config.oncall_config)
+
+                oncall_alarm_messages = []
+                alarms_extracted = 0
+                for msg in oncall_messages_raw:
+                    alarm_info = oncall_parser.extract_alarm_info(msg)
+                    if alarm_info:
+                        alarms_extracted += 1
+                        # Verify the alarm name matches the oncall pattern
+                        alarm_name = alarm_info.get('name', '')
+                        if product_config.oncall_config.is_oncall_alarm(alarm_name):
+                            oncall_alarm_messages.append(msg)                
+                messages.extend(oncall_alarm_messages)
+                
+            except SlackAPIError as e:
+                print(f"Warning: Could not fetch from oncall channel: {e}")
+            except Exception as e:
+                print(f"Warning: Network error when fetching oncall channel: {e}")
+
+    alarm_stats, analyzable_alarms, total_alarms, ignored_messages, oncall_total, oncall_in_reperibilita = analyze_alarms(messages, analyzer_params)
 
     # Print statistics
     print(f"\n=== Alarm Statistics ===")
     print(f"Total alarms found:      {total_alarms}")
     print(f"Alarms ignored:          {len(ignored_messages)}")
-    print(f"Alarms analyzed:         {analyzed_alarms}")
+    print(f"Alarms analyzable:       {analyzable_alarms}")
+    if oncall_total > 0:
+        print(f"\n=== OnCall Statistics ===")
+        print(f"Total oncall alarms:     {oncall_total}")
+        print(f"OnCall in reperibilità:  {oncall_in_reperibilita}")
 
     # Generate reports based on requested formats
     for format_name in report_formats:
@@ -168,7 +206,10 @@ def main():
 
             # Instantiate and generate report
             reporter = reporter_class()
-            report_path = reporter.generate_report(alarm_stats, analyzed_alarms, total_alarms, analyzer_params, ignored_messages)
+            report_path = reporter.generate_report(
+                alarm_stats, analyzable_alarms, total_alarms, analyzer_params, ignored_messages,
+                oncall_total, oncall_in_reperibilita
+            )
             print(f"{format_name.upper()} report generated at: {report_path}")
 
         except ImportError as e:

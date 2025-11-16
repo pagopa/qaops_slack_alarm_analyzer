@@ -3,10 +3,13 @@ SEND product Slack message parsers for different environments.
 """
 import re
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 
 from .base_slack_parser import BaseSlackMessageParser
 from .product_environment import ProductEnvironment
+
+if TYPE_CHECKING:
+    from ..config.oncall_config import OnCallConfiguration
 
 # Regex patterns for SEND alarms
 OPENING_PATTERN = re.compile(r'#(\d+): ALARM: "([^"]+)" in (.+)')
@@ -21,8 +24,8 @@ def parse_slack_ts(ts_str: str) -> datetime:
 class SendProdParser(BaseSlackMessageParser):
     """Parser for SEND production environment messages."""
 
-    def __init__(self):
-        super().__init__(ProductEnvironment("SEND", "prod"))
+    def __init__(self, oncall_config: Optional['OnCallConfiguration'] = None):
+        super().__init__(ProductEnvironment("SEND", "prod"), oncall_config)
 
     def extract_alarm_info(self, message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Extract alarm info from SEND prod Slack message attachments."""
@@ -50,7 +53,8 @@ class SendProdParser(BaseSlackMessageParser):
                 'name': alarm_name,
                 'location': location,
                 'timestamp': timestamp,
-                'full_text': fallback
+                'full_text': fallback,
+                'is_oncall': self.is_oncall_alarm(alarm_name)
             }
 
         # Fallback: try to extract from fallback text
@@ -68,7 +72,8 @@ class SendProdParser(BaseSlackMessageParser):
                 'name': alarm_name,
                 'location': location,
                 'timestamp': timestamp,
-                'full_text': fallback
+                'full_text': fallback,
+                'is_oncall': self.is_oncall_alarm(alarm_name)
             }
 
         return None
@@ -77,12 +82,12 @@ class SendProdParser(BaseSlackMessageParser):
 class SendUatParser(BaseSlackMessageParser):
     """Parser for SEND UAT environment messages."""
 
-    def __init__(self):
-        super().__init__(ProductEnvironment("SEND", "uat"))
+    def __init__(self, oncall_config: Optional['OnCallConfiguration'] = None):
+        super().__init__(ProductEnvironment("SEND", "uat"), oncall_config)
 
     def extract_alarm_info(self, message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Extract alarm info from SEND UAT messages - same logic as prod for now."""
         # For now, UAT uses the same parsing logic as production
         # This can be customized if UAT has different message formats
-        prod_parser = SendProdParser()
+        prod_parser = SendProdParser(self.oncall_config)
         return prod_parser.extract_alarm_info(message)
