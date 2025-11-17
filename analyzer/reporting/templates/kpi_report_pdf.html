@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KPI Report - {{ date_range_str }}</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1cm;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 7pt;
+            line-height: 1.1;
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            color: #333;
+        }
+
+        .container {
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 12pt;
+            margin: 0 0 6pt 0;
+            border-bottom: 1.5pt solid #d73527;
+            padding-bottom: 3pt;
+            page-break-after: avoid;
+        }
+
+        h2 {
+            color: #444;
+            font-size: 10pt;
+            margin: 10pt 0 5pt 0;
+            border-bottom: 1pt solid #007acc;
+            padding-bottom: 2pt;
+            page-break-after: avoid;
+        }
+
+        .summary {
+            background-color: #f8f8f8;
+            padding: 5pt;
+            margin: 5pt 0 8pt 0;
+            border-left: 2pt solid #007acc;
+            page-break-inside: avoid;
+            font-size: 6pt;
+        }
+
+        .product-section {
+            margin: 8pt 0;
+            page-break-inside: avoid;
+        }
+
+        .env-table {
+            margin: 5pt 0;
+            page-break-inside: avoid;
+        }
+
+        .env-header {
+            background-color: #e9ecef;
+            padding: 3pt;
+            margin-top: 5pt;
+            border-left: 2pt solid #6c757d;
+            font-weight: bold;
+            font-size: 8pt;
+            page-break-after: avoid;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 4pt 0;
+            font-size: 6pt;
+            page-break-inside: auto;
+            table-layout: fixed;
+        }
+
+        th, td {
+            padding: 2pt 3pt;
+            border: 0.5pt solid #ddd;
+            text-align: center;
+            vertical-align: middle;
+            overflow: hidden;
+        }
+
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            font-size: 6pt;
+        }
+
+        th.metric-col {
+            text-align: left;
+            background-color: #007acc;
+            color: white;
+            width: 80pt;
+        }
+
+        th.date-col {
+            background-color: #4a90e2;
+            color: white;
+            font-size: 5.5pt;
+            writing-mode: horizontal-tb;
+        }
+
+        thead {
+            display: table-header-group;
+        }
+
+        tbody {
+            display: table-row-group;
+        }
+
+        tr {
+            page-break-inside: avoid;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        td.metric-name {
+            text-align: left;
+            font-weight: 500;
+            font-size: 6pt;
+        }
+
+        td.value {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 6.5pt;
+        }
+
+        td.value.total {
+            color: #4a90e2;
+        }
+
+        td.value.analyzable {
+            color: #28a745;
+        }
+
+        td.value.ignored {
+            color: #ffa500;
+        }
+
+        td.value.oncall {
+            color: #ff6b6b;
+        }
+
+        td.value.reperibilita {
+            color: #ee5a24;
+        }
+
+        td.error {
+            color: #dc3545;
+            font-style: italic;
+            font-size: 5.5pt;
+        }
+
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+            }
+
+            .product-section {
+                page-break-before: auto;
+            }
+
+            h2 {
+                page-break-after: avoid;
+            }
+
+            table {
+                page-break-inside: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 KPI Report - {{ date_range_str }}</h1>
+
+        <div class="summary">
+            <strong>Period:</strong> {{ dates[0] }} to {{ dates[-1] }} ({{ dates|length }} days) |
+            <strong>Products:</strong> {{ products|join(', ') }} |
+            <strong>Generated:</strong> {{ now() }}
+        </div>
+
+        {% for product in products %}
+        <div class="product-section">
+            <h2>Product: {{ product }}</h2>
+
+            {% for environment in kpi_data[product].keys()|sort %}
+            <div class="env-table">
+                <div class="env-header">Environment: {{ environment|upper }}</div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="metric-col">Metric</th>
+                            {% for date in dates %}
+                            <th class="date-col">{{ date }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Total Alarms -->
+                        <tr>
+                            <td class="metric-name">Total Alarms</td>
+                            {% for date in dates %}
+                            <td class="value total">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['total_alarms'] }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- Analyzable Alarms -->
+                        <tr>
+                            <td class="metric-name">Analyzable Alarms</td>
+                            {% for date in dates %}
+                            <td class="value analyzable">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['analyzable_alarms'] }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- Ignored Alarms -->
+                        <tr>
+                            <td class="metric-name">Ignored Alarms</td>
+                            {% for date in dates %}
+                            <td class="value ignored">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['ignored_alarms'] }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- OnCall Alarms (only for prod) -->
+                        {% if environment == 'prod' %}
+                        <tr>
+                            <td class="metric-name">OnCall Alarms</td>
+                            {% for date in dates %}
+                            <td class="value oncall">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['oncall_total'] if kpi_data[product][environment][date]['oncall_total'] is not none else '0' }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- OnCall Reperibilità (only for prod) -->
+                        <tr>
+                            <td class="metric-name">OnCall Reperibilità</td>
+                            {% for date in dates %}
+                            <td class="value reperibilita">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['oncall_in_reperibilita'] if kpi_data[product][environment][date]['oncall_in_reperibilita'] is not none else '0' }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

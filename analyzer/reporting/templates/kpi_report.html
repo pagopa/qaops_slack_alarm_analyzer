@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KPI Report - {{ date_range_str }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #d73527;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #444;
+            margin-top: 30px;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 5px;
+        }
+        .summary {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #007acc;
+        }
+        .product-section {
+            margin: 30px 0;
+            page-break-inside: avoid;
+        }
+        .env-table {
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 600px;
+        }
+        @media screen and (max-width: 1200px) {
+            .env-table {
+                overflow-x: scroll;
+            }
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        th.metric-col {
+            text-align: left;
+            background-color: #007acc;
+            color: white;
+        }
+        th.date-col {
+            background-color: #4a90e2;
+            color: white;
+            min-width: 100px;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        td.metric-name {
+            text-align: left;
+            font-weight: 500;
+        }
+        td.value {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        td.value.total {
+            color: #4a90e2;
+        }
+        td.value.analyzable {
+            color: #28a745;
+        }
+        td.value.ignored {
+            color: #ffa500;
+        }
+        td.value.oncall {
+            color: #ff6b6b;
+        }
+        td.value.reperibilita {
+            color: #ee5a24;
+        }
+        td.error {
+            color: #dc3545;
+            font-style: italic;
+        }
+        .env-header {
+            background-color: #e9ecef;
+            padding: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #6c757d;
+            font-weight: bold;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 KPI Report - {{ date_range_str }}</h1>
+
+        <div class="summary">
+            <strong>Period:</strong> {{ dates[0] }} to {{ dates[-1] }} ({{ dates|length }} days)<br>
+            <strong>Products:</strong> {{ products|join(', ') }}<br>
+            <strong>Generated:</strong> {{ now() }}
+        </div>
+
+        {% for product in products %}
+        <div class="product-section">
+            <h2>Product: {{ product }}</h2>
+
+            {% for environment in kpi_data[product].keys()|sort %}
+            <div class="env-table">
+                <div class="env-header">Environment: {{ environment|upper }}</div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="metric-col">Metric</th>
+                            {% for date in dates %}
+                            <th class="date-col">{{ date }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Total Alarms -->
+                        <tr>
+                            <td class="metric-name">Total Alarms</td>
+                            {% for date in dates %}
+                            <td class="value total">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['total_alarms'] }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- Analyzable Alarms -->
+                        <tr>
+                            <td class="metric-name">Analyzable Alarms</td>
+                            {% for date in dates %}
+                            <td class="value analyzable">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['analyzable_alarms'] }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- Ignored Alarms -->
+                        <tr>
+                            <td class="metric-name">Ignored Alarms</td>
+                            {% for date in dates %}
+                            <td class="value ignored">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['ignored_alarms'] }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- OnCall Alarms (only for prod) -->
+                        {% if environment == 'prod' %}
+                        <tr>
+                            <td class="metric-name">OnCall Alarms</td>
+                            {% for date in dates %}
+                            <td class="value oncall">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['oncall_total'] if kpi_data[product][environment][date]['oncall_total'] is not none else '0' }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- OnCall Reperibilità (only for prod) -->
+                        <tr>
+                            <td class="metric-name">OnCall Reperibilità</td>
+                            {% for date in dates %}
+                            <td class="value reperibilita">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['oncall_in_reperibilita'] if kpi_data[product][environment][date]['oncall_in_reperibilita'] is not none else '0' }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

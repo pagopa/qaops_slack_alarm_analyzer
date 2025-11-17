@@ -10,9 +10,9 @@ products:
       prod:
         # Production environment Slack channel ID for SEND product alerts
         slack_channel_id: "C0585442Z39"
-      uat:
-        # UAT environment Slack channel ID for SEND product alerts
-        slack_channel_id: "C03JJLHL5K8"
+      # uat:
+      #   # UAT environment Slack channel ID for SEND product alerts
+      #   slack_channel_id: "C03JJLHL5K8"
 
     # Alarm filtering and ignore rules configuration
     alarms:
@@ -121,6 +121,21 @@ products:
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
 
+        - name: "pn-ec-tracker-email-errori-queue-DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+
+        - name: "pn-f24_internal_pdf_generator-DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+
+        - name: "pn-national_registries_certificate_DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+
+        - name: "pn-opensearch-low-storage"
+          path: "attachments.title.alarm_name"
+          reason: "Questo allarme va gestito direttamente dal gruppo Infra"
 
         # JWKS Cache Refresh Lambda Errors
         - name: "pn-jwksCacheRefreshLambda-LogInvocationErrors-Alarm"
