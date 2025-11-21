@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import os
 import sys
 import warnings
+import re
 from typing import Dict, Any, List
 
 # Suppress urllib3 warning about OpenSSL version
@@ -56,26 +57,31 @@ def parse_date_range(date_range_str: str) -> List[str]:
 def collect_kpi_data(
     config_reader: ConfigReader,
     bot_token: str,
-    dates: List[str]
+    dates: List[str],
+    products_to_analyze: Dict[str, List[str]]
 ) -> Dict[str, Dict[str, Dict[str, Dict[str, Any]]]]:
     """
-    Collect KPI data for all products, environments, and dates.
+    Collect KPI data for specified products, environments, and dates.
+
+    Args:
+        config_reader: Configuration reader instance
+        bot_token: Slack bot token
+        dates: List of dates to analyze
+        products_to_analyze: Dict mapping product to list of environments
 
     Returns:
         Dict structure: {product: {environment: {date: {kpis}}}}
     """
     kpi_data = {}
 
-    # Get all products
-    products = config_reader.get_product_names()
-
     print(f"\n=== Collecting KPI Data ===")
-    print(f"Products: {', '.join(products)}")
+    print(f"Products: {', '.join(products_to_analyze.keys())}")
     print(f"Date range: {dates[0]} to {dates[-1]} ({len(dates)} days)")
     print()
 
-    for product in products:
+    for product, environments in products_to_analyze.items():
         print(f"Processing product: {product}")
+        print(f"  Environments: {', '.join(environments)}")
         kpi_data[product] = {}
 
         # Get product configuration
@@ -83,9 +89,6 @@ def collect_kpi_data(
         if not product_config:
             print(f"  Warning: Could not load configuration for product {product}")
             continue
-
-        # Get all environments for this product
-        environments = config_reader.get_environment_names(product)
 
         for environment in environments:
             print(f"  Environment: {environment}")
@@ -167,20 +170,69 @@ def collect_kpi_data(
     return kpi_data
 
 
+def parse_product_filter(products_str: str) -> Dict[str, List[str]]:
+    """
+    Parse product filter string with environment specifications.
+
+    Syntax: PRODUCT1:env1:env2,PRODUCT2:env3
+    - PRODUCT -> product with all environments
+    - PRODUCT:env1:env2 -> product with specific environments (colon-separated)
+
+    Returns:
+        Dict[product_name, list_of_environments or None]
+        None in list means all environments for that product
+    """
+    products_dict = {}
+
+    # Split by comma to get individual product specifications
+    product_specs = products_str.split(',')
+
+    for spec in product_specs:
+        spec = spec.strip()
+        if not spec:
+            continue
+
+        # Split by colon: first is product, rest are environments
+        parts = spec.split(':')
+        product_name = parts[0].strip().upper()
+
+        if len(parts) > 1:
+            # Environments specified after colon
+            envs = [e.strip().lower() for e in parts[1:] if e.strip()]
+            products_dict[product_name] = envs
+        else:
+            # No colon means all environments
+            products_dict[product_name] = None
+
+    return products_dict
+
+
 def parse_arguments():
     """Parse command line arguments."""
     if len(sys.argv) < 2:
-        print("Usage: python kpi_report.py <date_range> [report=formats]")
+        print("Usage: python kpi_report.py <date_range> [product=products] [report=formats]")
         print()
         print("Date range formats:")
         print("  Single date: DD-MM-YY (e.g., 19-09-25)")
         print("  Date range: DD-MM-YY:DD-MM-YY (e.g., 19-09-25:21-09-25)")
         print()
+        print("Optional filters:")
+        print("  product=PRODUCT:envs    Specify products with optional environments")
+        print()
+        print("Product syntax:")
+        print("  PRODUCT                 Product with all environments")
+        print("  PRODUCT:env1:env2       Product with specific environments (colon-separated)")
+        print("  PROD1:env1,PROD2:env2   Multiple products (comma-separated)")
+        print()
         print("Examples:")
         print("  python kpi_report.py 19-09-25")
         print("  python kpi_report.py 19-09-25:21-09-25")
-        print("  python kpi_report.py 19-09-25:21-09-25 report=html")
-        print("  python kpi_report.py 19-09-25:21-09-25 report=html,pdf")
+        print("  python kpi_report.py 19-09-25:21-09-25 product=SEND")
+        print("  python kpi_report.py 19-09-25:21-09-25 product=SEND:prod")
+        print("  python kpi_report.py 19-09-25:21-09-25 product=SEND:prod:uat")
+        print("  python kpi_report.py 19-09-25:21-09-25 product=SEND,INTEROP")
+        print("  python kpi_report.py 19-09-25:21-09-25 product=SEND:prod:uat,INTEROP:prod")
+        print("  python kpi_report.py 19-09-25:21-09-25 product=SEND:prod report=pdf")
         print()
         print("Report formats: html, pdf, csv (default: html)")
         sys.exit(1)
@@ -194,8 +246,9 @@ def parse_arguments():
         'csv': {'class': 'KpiCsvReporter', 'module': 'analyzer.reporting.kpi_csv_reporter'}
     }
 
-    # Parse report formats
+    # Parse optional parameters
     report_formats = ['html']  # Default
+    products_filter = None  # None means all products, Dict[product, [envs]] otherwise
 
     for i in range(2, len(sys.argv)):
         arg = sys.argv[i]
@@ -210,11 +263,20 @@ def parse_arguments():
                 print(f"Valid formats are: {', '.join(sorted(valid_formats.keys()))}")
                 sys.exit(1)
 
-    return date_range_str, report_formats, valid_formats
+        elif arg.startswith('product='):
+            products_str = arg.split('=', 1)[1]
+            try:
+                products_filter = parse_product_filter(products_str)
+            except Exception as e:
+                print(f"Error parsing product filter: {e}")
+                print("Expected syntax: PRODUCT1:env1:env2,PRODUCT2:env3")
+                sys.exit(1)
+
+    return date_range_str, report_formats, valid_formats, products_filter
 
 
 def main():
-    date_range_str, report_formats, valid_formats = parse_arguments()
+    date_range_str, report_formats, valid_formats, products_filter = parse_arguments()
 
     # Parse date range
     try:
@@ -231,6 +293,39 @@ def main():
         print(f"Error loading configuration: {e}")
         sys.exit(1)
 
+    # Validate and build products_to_analyze dict
+    available_products = config_reader.get_product_names()
+
+    if products_filter:
+        # Validate products
+        invalid_products = [p for p in products_filter.keys() if p not in available_products]
+        if invalid_products:
+            print(f"Error: Invalid product(s): {', '.join(invalid_products)}")
+            print(f"Available products: {', '.join(available_products)}")
+            sys.exit(1)
+
+        # Validate environments for each product
+        products_to_analyze = {}
+        for product, envs in products_filter.items():
+            available_envs = config_reader.get_environment_names(product)
+
+            if envs is None:
+                # No environments specified, use all
+                products_to_analyze[product] = available_envs
+            else:
+                # Validate specified environments
+                invalid_envs = [e for e in envs if e not in available_envs]
+                if invalid_envs:
+                    print(f"Error: Invalid environment(s) for product {product}: {', '.join(invalid_envs)}")
+                    print(f"Available environments for {product}: {', '.join(available_envs)}")
+                    sys.exit(1)
+                products_to_analyze[product] = envs
+    else:
+        # No filter specified, use all products with all their environments
+        products_to_analyze = {}
+        for product in available_products:
+            products_to_analyze[product] = config_reader.get_environment_names(product)
+
     # Read Slack token
     load_dotenv()
     bot_token = os.getenv('SLACK_TOKEN')
@@ -239,7 +334,7 @@ def main():
         sys.exit(1)
 
     # Collect KPI data
-    kpi_data = collect_kpi_data(config_reader, bot_token, dates)
+    kpi_data = collect_kpi_data(config_reader, bot_token, dates, products_to_analyze)
 
     # Generate reports
     print("\n=== Generating Reports ===")

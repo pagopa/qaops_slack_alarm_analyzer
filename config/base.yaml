@@ -125,17 +125,47 @@ products:
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
 
-        - name: "pn-f24_internal_pdf_generator-DLQ-HasMessage"
+        - name: "pn-f24_internal_pdf_generator-DLQ-HasMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
 
-        - name: "pn-national_registries_certificate_DLQ-HasMessage"
+        - name: "pn-national_registries_certificate_DLQ-HasMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-opensearch-low-storage"
           path: "attachments.title.alarm_name"
           reason: "Questo allarme va gestito direttamente dal gruppo Infra"
+
+        - name: "pn-ec-pec-scaricamento-esiti-queue-DLQ-HasMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          
+        - name: "pn-ec-cartaceo-batch-queue-HasOldMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+
+        - name: "pn-ec-sms-batch-queue-HasOldMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+        
+        - name: "pn-ec-tracker-sms-errori-queue-DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+
+        - name: "pn-ec-availabilitymanager-queue-DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+
+        - name: "pn-ss-transformation-sign-queue-DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          
+        # - name: "pn-external-channel-PecNamirial-multipleReceipt-alarm"
+        #   path: "attachments.title.alarm_name"
+        #   reason: "L'allarme non scatta in presenza di determinati termini nei log (es. Error, Fatal) ma è direttametne collegato alla metrica 'multipleReceipt' che misura la numerosità dei duplicati nelle ricevute PEC (accettazione e ricezione). L'allarme non è associato a problematiche che impattano i cittadini. Nota: In concomitanza all'attivazione di questo allarme potrebbero presentarsi diversi messaggi nella DLQ pn-ec-tracker-pec-errori-queue-DLQ.fifo e che potranno essere gestiti (rimossi) tramite lo script di automazione check_safestorage_dlq."
+        #   validity:
+        #     start: "2025-19-09"
 
         # JWKS Cache Refresh Lambda Errors
         - name: "pn-jwksCacheRefreshLambda-LogInvocationErrors-Alarm"
