@@ -20,6 +20,8 @@ from analyzer.alarm_parser import analyze_alarms
 from analyzer.utils import get_evening_window
 from analyzer.config.config_reader import ConfigReader
 from analyzer.analyzer_params import AnalyzerParams
+from analyzer.alarm_type import build_alarm_types
+from analyzer.alarm_analysis_result import merge_analysis_results
 
 
 def parse_date_range(date_range_str: str) -> List[str]:
@@ -100,63 +102,43 @@ def collect_kpi_data(
                 print(f"    Warning: No Slack channel ID for {product}/{environment}")
                 continue
 
+            # Build alarm types for this product/environment
+            alarm_types = build_alarm_types(product_config, product, environment)
+            if not alarm_types:
+                print(f"    Warning: No alarm types configured")
+                continue
+
             for date_str in dates:
                 print(f"    Processing date: {date_str}... ", end='', flush=True)
 
                 try:
-                    # Get time window for this date
-                    oldest, latest = get_evening_window(date_str)
+                    # Analyze each alarm type separately
+                    analysis_results = []
 
-                    # Create analyzer parameters
-                    analyzer_params = AnalyzerParams(
-                        date_str=date_str,
-                        product=product,
-                        environment=environment,
-                        slack_channel_id=slack_channel_id,
-                        oldest=oldest,
-                        latest=latest,
-                        product_config=product_config,
-                        slack_token=bot_token
-                    )
+                    for alarm_type in alarm_types:
+                        # Get time window for this alarm type
+                        oldest, latest = alarm_type.get_time_window(date_str)
 
-                    # Fetch messages from main channel
-                    messages = fetch_slack_messages(slack_channel_id, bot_token, oldest, latest)
+                        # Fetch messages for this alarm type's channel and time window
+                        messages = fetch_slack_messages(alarm_type.channel_id, bot_token, oldest, latest)
 
-                    # If prod environment and oncall channel is different, fetch from oncall too
-                    if environment == 'prod' and product_config.oncall_config:
-                        oncall_channel_id = product_config.oncall_config.channel_id
-                        if oncall_channel_id and oncall_channel_id != slack_channel_id:
-                            from analyzer.slack.parser_provider import SlackMessageParserProvider
+                        # Analyze alarms for this type
+                        result = analyze_alarms(messages, alarm_type, product_config)
+                        analysis_results.append(result)
 
-                            oncall_messages_raw = fetch_slack_messages(oncall_channel_id, bot_token, oldest, latest)
-
-                            # Filter oncall messages
-                            parser_provider = SlackMessageParserProvider()
-                            oncall_parser = parser_provider.get_parser(product, environment, product_config.oncall_config)
-
-                            oncall_alarm_messages = []
-                            for msg in oncall_messages_raw:
-                                alarm_info = oncall_parser.extract_alarm_info(msg)
-                                if alarm_info:
-                                    alarm_name = alarm_info.get('name', '')
-                                    if product_config.oncall_config.is_oncall_alarm(alarm_name):
-                                        oncall_alarm_messages.append(msg)
-
-                            messages.extend(oncall_alarm_messages)
-
-                    # Analyze alarms
-                    alarm_stats, analyzable_alarms, total_alarms, ignored_messages, oncall_total, oncall_in_reperibilita = analyze_alarms(messages, analyzer_params)
+                    # Merge all results
+                    merged_result = merge_analysis_results(analysis_results)
 
                     # Store KPIs
                     kpi_data[product][environment][date_str] = {
-                        'total_alarms': total_alarms,
-                        'analyzable_alarms': analyzable_alarms,
-                        'ignored_alarms': len(ignored_messages),
-                        'oncall_total': oncall_total if environment == 'prod' else None,
-                        'oncall_in_reperibilita': oncall_in_reperibilita if environment == 'prod' else None
+                        'total_alarms': merged_result.total_alarms,
+                        'analyzable_alarms': merged_result.analyzable_alarms,
+                        'ignored_alarms': merged_result.ignored_alarms,
+                        'oncall_total': merged_result.oncall_total if environment == 'prod' else None,
+                        'oncall_in_reperibilita': merged_result.oncall_in_reperibilita if environment == 'prod' else None
                     }
 
-                    print(f"✓ (Total: {total_alarms}, Analyzable: {analyzable_alarms}, OnCall: {oncall_total if environment == 'prod' else 'N/A'})")
+                    print(f"✓ (Total: {merged_result.total_alarms}, Analyzable: {merged_result.analyzable_alarms}, OnCall: {merged_result.oncall_total if environment == 'prod' else 'N/A'})")
 
                 except SlackAPIError as e:
                     print(f"✗ Slack API error: {e}")

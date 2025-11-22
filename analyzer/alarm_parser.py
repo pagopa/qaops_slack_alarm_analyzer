@@ -4,6 +4,8 @@ from collections import defaultdict, Counter
 from .config import IgnoreRuleParser, is_oncall_in_reperibilita
 from .analyzer_params import AnalyzerParams
 from .slack import SlackMessageParserProvider
+from .alarm_type import AlarmType
+from .alarm_analysis_result import AlarmAnalysisResult
 
 DETAILED_TIME_HISTOGRAM = True  # Set False to disable hourly distribution
 OPENING_PATTERN = re.compile(r'#(\d+): ALARM: "([^"]+)" in (.+)')
@@ -12,37 +14,35 @@ CLOSING_PATTERN = re.compile(r'CloudWatch closed alert .*?\|#(\d+)> "ALARM:\s*"(
 def parse_slack_ts(ts_str):
     return datetime.fromtimestamp(float(ts_str))
 
-def analyze_alarms(messages, params: AnalyzerParams):
+def analyze_alarms(messages, alarm_type: AlarmType, product_config):
     """
-    Analyze alarm messages and aggregate by alarm name.
+    Analyze alarm messages and filter by alarm type.
+
+    Args:
+        messages: List of raw Slack messages
+        alarm_type: AlarmType instance defining the type of alarms to analyze
+        product_config: Product configuration for ignore rules
 
     Returns:
-        tuple: (alarm_stats, analyzable_alarms, total_alarms, ignored_messages, oncall_total, oncall_in_reperibilita)
-            - alarm_stats: dict of alarm name -> list of alarm info
-            - analyzable_alarms: count of alarms that can be analyzed (total - ignored)
-            - total_alarms: total count of ALARM messages found (includes ignored)
-            - ignored_messages: list of ignored alarm info
-            - oncall_total: total count of oncall alarms
-            - oncall_in_reperibilita: count of oncall alarms outside office hours
+        AlarmAnalysisResult: Analysis results for this alarm type
     """
     alarm_stats = defaultdict(list)
-    total_alarms = 0  # Total count of ALARM messages (both analyzable and ignored)
+    total_alarms = 0
     ignored_messages = []
-    oncall_total = 0  # Total oncall alarms
-    oncall_in_reperibilita = 0  # Oncall alarms outside office hours (9-18 Italy time)
+    oncall_total = 0
+    oncall_in_reperibilita = 0
 
-    # Get ignore rules from the product configuration passed in params
-    applicable_rules = params.product_rules
+    # Get ignore rules from the product configuration
+    applicable_rules = product_config.ignore_rules if product_config else []
     ignore_rule_parser = IgnoreRuleParser(applicable_rules)
 
-    # Get the appropriate parser for this product-environment combination
-    # Pass oncall configuration if available
-    oncall_config = params.product_config.oncall_config if params.product_config else None
+    # Get the appropriate parser for this alarm type's product-environment
+    oncall_config = product_config.oncall_config if product_config else None
     parser_provider = SlackMessageParserProvider()
-    slack_parser = parser_provider.get_parser(params.product, params.environment, oncall_config)
+    slack_parser = parser_provider.get_parser(alarm_type.product, alarm_type.environment, oncall_config)
 
     if not slack_parser:
-        raise ValueError(f"No parser available for product '{params.product}' environment '{params.environment}'")
+        raise ValueError(f"No parser available for product '{alarm_type.product}' environment '{alarm_type.environment}'")
 
     for message in messages:
         # First, try to parse the message as an alarm
@@ -50,30 +50,48 @@ def analyze_alarms(messages, params: AnalyzerParams):
 
         # Only process if it's an alarm message
         if alarm_info:
-            total_alarms += 1  # Count all alarms (both ignored and analyzed)
+            alarm_name = alarm_info.get('name', '')
 
-            # Track oncall statistics
-            if alarm_info.get('is_oncall', False):
+            # Filter by alarm type pattern
+            if not alarm_type.matches_alarm_name(alarm_name):
+                continue
+
+            total_alarms += 1
+
+            # Track oncall statistics (only for oncall alarm types)
+            if alarm_type.is_oncall():
                 oncall_total += 1
                 alarm_timestamp = alarm_info.get('timestamp')
                 if alarm_timestamp and is_oncall_in_reperibilita(alarm_timestamp):
                     oncall_in_reperibilita += 1
 
-            # Check if this alarm should be ignored (using the alarm's timestamp for validity check)
+            # Check if this alarm should be ignored
             alarm_timestamp = alarm_info.get('timestamp')
-            if ignore_rule_parser.should_ignore_message(message, params.environment, alarm_timestamp):
-                ignored_info = create_ignored_message_info(message, ignore_rule_parser, alarm_info, params.environment)
+            if ignore_rule_parser.should_ignore_message(message, alarm_type.environment, alarm_timestamp):
+                ignored_info = create_ignored_message_info(message, ignore_rule_parser, alarm_info, alarm_type.environment)
                 ignored_messages.append(ignored_info)
             else:
-                # This alarm is analyzable (can be analyzed)
-                alarm_stats[alarm_info['name']].append(alarm_info)
+                # This alarm is analyzable
+                alarm_stats[alarm_name].append(alarm_info)
 
-    # Calculate analyzable alarms = total alarms - ignored alarms
+    # Calculate analyzable alarms
     analyzable_alarms = total_alarms - len(ignored_messages)
 
-    print(f"Ignored {len(ignored_messages)} alarm messages based on ignore patterns")
-    print(f"OnCall alarms: {oncall_total} total, {oncall_in_reperibilita} in reperibilità")
-    return alarm_stats, analyzable_alarms, total_alarms, ignored_messages, oncall_total, oncall_in_reperibilita
+    print(f"[{alarm_type}] Total: {total_alarms}, Analyzable: {analyzable_alarms}, Ignored: {len(ignored_messages)}")
+    if alarm_type.is_oncall():
+        print(f"[{alarm_type}] OnCall: {oncall_total} total, {oncall_in_reperibilita} in reperibilità")
+
+    # Return AlarmAnalysisResult
+    return AlarmAnalysisResult(
+        alarm_stats=dict(alarm_stats),
+        total_alarms=total_alarms,
+        analyzable_alarms=analyzable_alarms,
+        ignored_alarms=len(ignored_messages),
+        ignored_messages=ignored_messages,
+        oncall_total=oncall_total,
+        oncall_in_reperibilita=oncall_in_reperibilita,
+        alarm_type=alarm_type
+    )
 
 def print_hourly_distribution(timestamps):
     """Print a 24-hour distribution of timestamps."""

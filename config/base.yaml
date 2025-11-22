@@ -8,11 +8,9 @@ products:
     # Each environment routes alarm notifications to its designated Slack channel
     envs:
       prod:
-        # Production environment Slack channel ID for SEND product alerts
         slack_channel_id: "C0585442Z39"
-      # uat:
-      #   # UAT environment Slack channel ID for SEND product alerts
-      #   slack_channel_id: "C03JJLHL5K8"
+      uat:
+        slack_channel_id: "C03JJLHL5K8"
 
     # Alarm filtering and ignore rules configuration
     alarms:
@@ -237,8 +235,6 @@ products:
         # Per documentazione completa: docs/IGNORE_RULES_GUIDE.md
 
       # OnCall alarms configuration
-      # OnCall alarms are urgent alarms that require immediate attention
-      # If triggered outside office hours (9-18 Italy time), they trigger on-call duty
       oncall:
         # Slack channel ID where oncall alarms are posted (same as prod for SEND)
         channel_id: "C0585442Z39"

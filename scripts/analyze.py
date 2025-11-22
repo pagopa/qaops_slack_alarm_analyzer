@@ -12,6 +12,8 @@ from analyzer.alarm_parser import analyze_alarms
 from analyzer.utils import get_evening_window
 from analyzer.config.config_reader import ConfigReader
 from analyzer.analyzer_params import AnalyzerParams
+from analyzer.alarm_type import build_alarm_types
+from analyzer.alarm_analysis_result import merge_analysis_results
 
 def parse_arguments():
     """Parse command line arguments including report formats."""
@@ -109,14 +111,74 @@ def main():
         print("Error: SLACK_TOKEN environment variable not set")
         sys.exit(1)
 
-    try:
-        oldest, latest = get_evening_window(date_str)
-    except ValueError as e:
-        print(f"Date parsing error: {e}")
+    # Build alarm types for this product/environment
+    alarm_types = build_alarm_types(product_config, product, environment)
+
+    if not alarm_types:
+        print(f"Error: No alarm types configured for product {product} environment {environment}")
         sys.exit(1)
 
-    # Create analyzer parameters
+    print(f"\n=== Alarm Analysis ===")
+    print(f"Product: {product}")
+    print(f"Environment: {environment}")
+    print(f"Date: {date_str}")
+    print(f"Alarm types to analyze: {len(alarm_types)}")
+    for at in alarm_types:
+        print(f"  - {at}")
+
+    # Analyze each alarm type separately
+    analysis_results = []
+
+    for alarm_type in alarm_types:
+        print(f"\n=== Processing {alarm_type} ===")
+
+        # Get time window for this alarm type
+        try:
+            oldest, latest = alarm_type.get_time_window(date_str)
+        except ValueError as e:
+            print(f"Date parsing error: {e}")
+            continue
+
+        print(f"Time window: {datetime.fromtimestamp(oldest).strftime('%Y-%m-%d %H:%M:%S')} to {datetime.fromtimestamp(latest).strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"Channel ID: {alarm_type.channel_id}")
+
+        # Fetch messages for this alarm type's channel and time window
+        try:
+            messages = fetch_slack_messages(alarm_type.channel_id, bot_token, oldest, latest)
+            print(f"Fetched {len(messages)} messages from channel")
+        except SlackAPIError as e:
+            print(f"Slack API error: {e}")
+            continue
+        except Exception as e:
+            print(f"Network or HTTP error: {e}")
+            continue
+
+        # Analyze alarms for this type
+        try:
+            result = analyze_alarms(messages, alarm_type, product_config)
+            analysis_results.append(result)
+        except Exception as e:
+            print(f"Analysis error: {e}")
+            continue
+
+    # Merge all results
+    if not analysis_results:
+        print("\nNo analysis results to process")
+        sys.exit(1)
+
+    merged_result = merge_analysis_results(analysis_results)
+
+    # Extract values from merged result for backward compatibility
+    alarm_stats = merged_result.alarm_stats
+    analyzable_alarms = merged_result.analyzable_alarms
+    total_alarms = merged_result.total_alarms
+    ignored_messages = merged_result.ignored_messages
+    oncall_total = merged_result.oncall_total
+    oncall_in_reperibilita = merged_result.oncall_in_reperibilita
+
+    # Create analyzer parameters for reporters (using main channel and evening window for backward compatibility)
     try:
+        oldest, latest = get_evening_window(date_str)
         analyzer_params = AnalyzerParams(
             date_str=date_str,
             product=product,
@@ -128,60 +190,8 @@ def main():
             slack_token=bot_token
         )
     except ValueError as e:
-        print(f"Parameter validation error: {e}")
+        print(f"Parameter creation error: {e}")
         sys.exit(1)
-
-    print(f"\n=== Alarm Statistics ===")
-    print("Start window: ", datetime.fromtimestamp(oldest).strftime('%Y-%m-%d %H:%M:%S'))
-    print("End window:", datetime.fromtimestamp(latest).strftime('%Y-%m-%d %H:%M:%S'))
-    print(f"Analyzing alarm for product: {product}")
-    print(f"Environment: {environment}")
-    print(f"Channel ID: {slack_channel_id}")
-
-    try:
-        messages = fetch_slack_messages(slack_channel_id, bot_token, oldest, latest)
-        print(f"Fetched {len(messages)} messages from main channel")
-    except SlackAPIError as e:
-        print(f"Slack API error: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Network or HTTP error: {e}")
-        sys.exit(1)
-
-    # If environment is prod and oncall channel is different, fetch from oncall channel too
-    if environment == 'prod' and product_config.oncall_config:
-        oncall_channel_id = product_config.oncall_config.channel_id
-        if oncall_channel_id and oncall_channel_id != slack_channel_id:
-            print(f"\nOnCall dedicated channel detected: {oncall_channel_id}")
-            print(f"Fetching additional oncall messages...")
-            try:
-                from analyzer.slack.parser_provider import SlackMessageParserProvider
-
-                oncall_messages_raw = fetch_slack_messages(oncall_channel_id, bot_token, oldest, latest)
-                print(f"Fetched {len(oncall_messages_raw)} raw messages from oncall channel")
-
-                # Filter oncall messages: extract only alarm messages that match oncall pattern
-                parser_provider = SlackMessageParserProvider()
-                oncall_parser = parser_provider.get_parser(product, environment, product_config.oncall_config)
-
-                oncall_alarm_messages = []
-                alarms_extracted = 0
-                for msg in oncall_messages_raw:
-                    alarm_info = oncall_parser.extract_alarm_info(msg)
-                    if alarm_info:
-                        alarms_extracted += 1
-                        # Verify the alarm name matches the oncall pattern
-                        alarm_name = alarm_info.get('name', '')
-                        if product_config.oncall_config.is_oncall_alarm(alarm_name):
-                            oncall_alarm_messages.append(msg)                
-                messages.extend(oncall_alarm_messages)
-                
-            except SlackAPIError as e:
-                print(f"Warning: Could not fetch from oncall channel: {e}")
-            except Exception as e:
-                print(f"Warning: Network error when fetching oncall channel: {e}")
-
-    alarm_stats, analyzable_alarms, total_alarms, ignored_messages, oncall_total, oncall_in_reperibilita = analyze_alarms(messages, analyzer_params)
 
     # Print statistics
     print(f"\n=== Alarm Statistics ===")
