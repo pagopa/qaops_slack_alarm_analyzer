@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KPI Report - {{ date_range_str }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+        .container {
+            max-width: {% if dates|length == 1 %}100%{% else %}1400px{% endif %};
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #d73527;
+            padding-bottom: 10px;
+            font-size: {% if dates|length == 1 %}32px{% else %}24px{% endif %};
+        }
+        h2 {
+            color: #444;
+            margin-top: 30px;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 5px;
+            font-size: {% if dates|length == 1 %}24px{% else %}20px{% endif %};
+        }
+        .summary {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #007acc;
+            font-size: {% if dates|length == 1 %}16px{% else %}14px{% endif %};
+        }
+        .product-section {
+            margin: 30px 0;
+            page-break-inside: avoid;
+        }
+
+        /* Single day layout: grid of cards */
+        {% if dates|length == 1 %}
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .product-card {
+            background: white;
+            border: 2px solid #007acc;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .product-card h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .env-card {
+            background: #f9f9f9;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .env-card:last-child {
+            margin-bottom: 0;
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            background: white;
+            font-size: 16px;
+        }
+        .metric-label {
+            font-weight: 600;
+            color: #333;
+        }
+        .metric-value {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        {% else %}
+        .env-table {
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        {% endif %}
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 600px;
+        }
+        @media screen and (max-width: 1200px) {
+            .env-table {
+                overflow-x: scroll;
+            }
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+        th.metric-col {
+            text-align: left;
+            background-color: #007acc;
+            color: white;
+        }
+        th.date-col {
+            background-color: #4a90e2;
+            color: white;
+            min-width: 100px;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        td.metric-name {
+            text-align: left;
+            font-weight: 500;
+        }
+        td.value {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        td.value.total {
+            color: #4a90e2;
+        }
+        td.value.analyzable {
+            color: #28a745;
+        }
+        td.value.ignored {
+            color: #ffa500;
+        }
+        td.value.oncall {
+            color: #ff6b6b;
+        }
+        td.value.reperibilita {
+            color: #ee5a24;
+        }
+        td.error {
+            color: #dc3545;
+            font-style: italic;
+        }
+        .env-header {
+            background-color: #e9ecef;
+            padding: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #6c757d;
+            font-weight: bold;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 KPI Report - {{ date_range_str }}</h1>
+
+        <div class="summary">
+            <strong>Period:</strong> {{ dates[0] }} to {{ dates[-1] }} ({{ dates|length }} day{% if dates|length > 1 %}s{% endif %})<br>
+            <strong>Products:</strong> {{ products|join(', ') }}<br>
+            <strong>Generated:</strong> {{ now() }}
+        </div>
+
+        {% if dates|length == 1 %}
+        <!-- Single day layout: cards grid -->
+        <div class="products-grid">
+            {% for product in products %}
+                {% for environment in kpi_data[product].keys() %}
+                <div class="product-card">
+                    <h2>{{ product }} - {{ environment|upper }}</h2>
+                    <div class="env-card">
+                        {% set date = dates[0] %}
+                        {% if kpi_data[product][environment][date] %}
+                            <div class="metric-row">
+                                <span class="metric-label">Total Alarms:</span>
+                                <span class="metric-value total">{{ kpi_data[product][environment][date]['total_alarms'] }}</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Analyzable Alarms:</span>
+                                <span class="metric-value analyzable">{{ kpi_data[product][environment][date]['analyzable_alarms'] }}</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Ignored Alarms:</span>
+                                <span class="metric-value ignored">{{ kpi_data[product][environment][date]['ignored_alarms'] }}</span>
+                            </div>
+                            {% if environment == 'prod' %}
+                            <div class="metric-row">
+                                <span class="metric-label">OnCall Alarms:</span>
+                                <span class="metric-value oncall">{{ kpi_data[product][environment][date]['oncall_total'] if kpi_data[product][environment][date]['oncall_total'] is not none else '0' }}</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">OnCall Reperibilità:</span>
+                                <span class="metric-value reperibilita">{{ kpi_data[product][environment][date]['oncall_in_reperibilita'] if kpi_data[product][environment][date]['oncall_in_reperibilita'] is not none else '0' }}</span>
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="metric-row">
+                                <span class="error">Error loading data</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Multi-day layout: tables -->
+        {% for product in products %}
+        <div class="product-section">
+            <h2>Product: {{ product }}</h2>
+
+            {% for environment in kpi_data[product].keys() %}
+            <div class="env-table">
+                <div class="env-header">Environment: {{ environment|upper }}</div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="metric-col">Metric</th>
+                            {% for date in dates %}
+                            <th class="date-col">{{ date }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Total Alarms -->
+                        <tr>
+                            <td class="metric-name">Total Alarms</td>
+                            {% for date in dates %}
+                            <td class="value total">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['total_alarms'] }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- Analyzable Alarms -->
+                        <tr>
+                            <td class="metric-name">Analyzable Alarms</td>
+                            {% for date in dates %}
+                            <td class="value analyzable">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['analyzable_alarms'] }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- Ignored Alarms -->
+                        <tr>
+                            <td class="metric-name">Ignored Alarms</td>
+                            {% for date in dates %}
+                            <td class="value ignored">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['ignored_alarms'] }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- OnCall Alarms (only for prod) -->
+                        {% if environment == 'prod' %}
+                        <tr>
+                            <td class="metric-name">OnCall Alarms</td>
+                            {% for date in dates %}
+                            <td class="value oncall">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['oncall_total'] if kpi_data[product][environment][date]['oncall_total'] is not none else '0' }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+
+                        <!-- OnCall Reperibilità (only for prod) -->
+                        <tr>
+                            <td class="metric-name">OnCall Reperibilità</td>
+                            {% for date in dates %}
+                            <td class="value reperibilita">
+                                {% if kpi_data[product][environment][date] %}
+                                    {{ kpi_data[product][environment][date]['oncall_in_reperibilita'] if kpi_data[product][environment][date]['oncall_in_reperibilita'] is not none else '0' }}
+                                {% else %}
+                                    <span class="error">Error</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+
+                <!-- Chart for multi-day reports -->
+                {% if dates|length >= 2 %}
+                <div style="margin-top: 20px; page-break-inside: avoid;">
+                    <canvas id="chart-{{ product }}-{{ environment }}" style="max-height: 400px; width: 100%;"></canvas>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Chart.js for multi-day reports -->
+    {% if dates|length >= 2 %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Chart data and configuration
+        const chartData = {{ chart_data_json | safe }};
+
+        // Format date from DD-MM-YY to Italian abbreviated weekday + day (e.g., 'mar 13')
+        function formatDateForChart(dateStr) {
+            const italianWeekdays = ['lun', 'mar', 'merc', 'giov', 'ven', 'sab', 'dom'];
+
+            try {
+                const [day, month, year] = dateStr.split('-');
+                const date = new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
+                const weekdayAbbr = italianWeekdays[date.getDay() === 0 ? 6 : date.getDay() - 1];
+                return `${weekdayAbbr} ${date.getDate()}`;
+            } catch (e) {
+                return dateStr; // Fallback to original if parsing fails
+            }
+        }
+
+        // Create combination chart for each product/environment
+        {% for product in products %}
+            {% for environment in kpi_data[product].keys() %}
+                (function() {
+                    const product = '{{ product }}';
+                    const environment = '{{ environment }}';
+                    const dates = {{ dates | tojson }};
+
+                    // Format dates for chart labels (e.g., 'mar 13')
+                    const formattedDates = dates.map(d => formatDateForChart(d));
+
+                    // Extract data for this product/environment
+                    const data = chartData[product][environment];
+
+                    // Combination chart with bars and lines
+                    const ctx = document.getElementById(`chart-${product}-${environment}`);
+                    if (ctx) {
+                        const datasets = [
+                            {
+                                label: 'Total Alarms',
+                                data: data.total_alarms,
+                                type: 'bar',
+                                backgroundColor: 'rgba(74, 144, 226, 0.6)',
+                                borderColor: '#2c5f8d',
+                                borderWidth: 1,
+                                order: 2
+                            },
+                            {
+                                label: 'Analyzable',
+                                data: data.analyzable_alarms,
+                                type: 'line',
+                                borderColor: '#28a745',
+                                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                                borderWidth: 2.5,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                tension: 0.3,
+                                order: 1
+                            },
+                            {
+                                label: 'Ignored',
+                                data: data.ignored_alarms,
+                                type: 'line',
+                                borderColor: '#ffa500',
+                                backgroundColor: 'rgba(255, 165, 0, 0.1)',
+                                borderWidth: 2.5,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                tension: 0.3,
+                                order: 1
+                            }
+                        ];
+
+                        // Add oncall metrics for prod
+                        if (environment === 'prod' && data.oncall_total) {
+                            datasets.push({
+                                label: 'OnCall Total',
+                                data: data.oncall_total,
+                                type: 'line',
+                                borderColor: '#ff6b6b',
+                                backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                                borderWidth: 2.5,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                tension: 0.3,
+                                order: 1
+                            });
+                            datasets.push({
+                                label: 'OnCall Reperibilità',
+                                data: data.oncall_in_reperibilita,
+                                type: 'line',
+                                borderColor: '#ee5a24',
+                                backgroundColor: 'rgba(238, 90, 36, 0.1)',
+                                borderWidth: 2.5,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                tension: 0.3,
+                                order: 1
+                            });
+                        }
+
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: formattedDates,
+                                datasets: datasets
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: true,
+                                layout: {
+                                    padding: {
+                                        left: 0,
+                                        right: 20
+                                    }
+                                },
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: `${product} ${environment.toUpperCase()} - Metrics Trend`,
+                                        font: { size: 14, weight: 'bold' }
+                                    },
+                                    legend: {
+                                        display: true,
+                                        position: 'top',
+                                        align: 'start'
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: {
+                                            offset: false
+                                        },
+                                        offset: false,
+                                        ticks: {
+                                            autoSkip: false,
+                                            maxRotation: 0,
+                                            minRotation: 0
+                                        }
+                                    },
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: { stepSize: 1 },
+                                        position: 'left'
+                                    }
+                                }
+                            }
+                        });
+                    }
+                })();
+            {% endfor %}
+        {% endfor %}
+    </script>
+    {% endif %}
+</body>
+</html>

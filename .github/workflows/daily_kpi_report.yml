@@ -1,0 +1,49 @@
+name: Daily KPI Report
+
+on:
+  schedule:
+    - cron: "0 7 * * *"  # Every day at 9:00 Rome (summer) / 08:00 Rome (winter)
+  workflow_dispatch:     # Allow manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  daily-kpi-report:
+    runs-on: ubuntu-latest
+    env:
+      SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Get yesterday's date
+        id: get_date
+        run: |
+          YESTERDAY=$(date -u -d "yesterday" "+%d-%m-%y")
+          echo "date=$YESTERDAY" >> $GITHUB_OUTPUT
+
+      - name: Generate KPI report for SEND
+        run: |
+          python3 -m scripts.kpi_report "${{ steps.get_date.outputs.date }}" product=SEND report=pdf
+
+      - name: Generate KPI report for INTEROP
+        run: |
+          python3 -m scripts.kpi_report "${{ steps.get_date.outputs.date }}" product=INTEROP report=pdf
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: kpi-reports-${{ steps.get_date.outputs.date }}
+          path: reports/

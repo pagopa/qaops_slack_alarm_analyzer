@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -54,6 +55,76 @@
             page-break-after: avoid;
         }
 
+        .statistics-box {
+            display: table;
+            width: 100%;
+            margin: 10pt 0 15pt 0;
+            border-collapse: separate;
+            border-spacing: 8pt;
+            page-break-inside: avoid;
+        }
+
+        .stat-row {
+            display: table-row;
+        }
+
+        .stat-card {
+            display: table-cell;
+            width: 33.33%;
+            background-color: #ffffff;
+            border: 1pt solid #e0e0e0;
+            padding: 10pt;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .stat-card.total {
+            border-color: #4a90e2;
+            border-width: 1.5pt;
+        }
+
+        .stat-card.ignored {
+            border-color: #ffa500;
+            border-width: 1.5pt;
+        }
+
+        .stat-card.analyzed {
+            border-color: #28a745;
+            border-width: 1.5pt;
+        }
+
+        .stat-label {
+            font-size: 8pt;
+            color: #666;
+            margin-bottom: 4pt;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .stat-value {
+            font-size: 20pt;
+            font-weight: bold;
+            margin: 6pt 0;
+        }
+
+        .stat-card.total .stat-value {
+            color: #4a90e2;
+        }
+
+        .stat-card.ignored .stat-value {
+            color: #ffa500;
+        }
+
+        .stat-card.analyzed .stat-value {
+            color: #28a745;
+        }
+
+        .stat-description {
+            font-size: 7pt;
+            color: #888;
+            margin-top: 4pt;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -62,7 +133,8 @@
             page-break-inside: auto;
         }
 
-        th, td {
+        th,
+        td {
             text-align: left;
             padding: 6pt 4pt;
             border: 0.5pt solid #ddd;
@@ -93,10 +165,31 @@
         }
 
         /* Specific column widths for alarm table */
-        th:nth-child(1), td:nth-child(1) { width: 40%; }  /* Alarm Name */
-        th:nth-child(2), td:nth-child(2) { width: 8%; text-align: center; }   /* Count */
-        th:nth-child(3), td:nth-child(3) { width: 30%; }  /* Recent Occurrences */
-        th:nth-child(4), td:nth-child(4) { width: 22%; }  /* Hourly Distribution */
+        th:nth-child(1),
+        td:nth-child(1) {
+            width: 40%;
+        }
+
+        /* Alarm Name */
+        th:nth-child(2),
+        td:nth-child(2) {
+            width: 8%;
+            text-align: center;
+        }
+
+        /* Count */
+        th:nth-child(3),
+        td:nth-child(3) {
+            width: 30%;
+        }
+
+        /* Recent Occurrences */
+        th:nth-child(4),
+        td:nth-child(4) {
+            width: 22%;
+        }
+
+        /* Hourly Distribution */
 
         .count-cell {
             text-align: center;
@@ -138,12 +231,12 @@
         }
 
         /* Grouping for better page flow */
-        .summary + h2 {
+        .summary+h2 {
             page-break-before: avoid;
             margin-top: 8pt;
         }
 
-        h2 + table {
+        h2+table {
             page-break-before: avoid;
             margin-top: 8pt;
         }
@@ -155,114 +248,148 @@
 
         /* Print-specific rules */
         @media print {
-            body { -webkit-print-color-adjust: exact; }
-            .container { page-break-inside: avoid; }
+            body {
+                -webkit-print-color-adjust: exact;
+            }
+
+            .container {
+                page-break-inside: avoid;
+            }
 
             /* Ensure continuous flow from summary to table */
-            .summary, h2, table {
+            .summary,
+            h2,
+            table {
                 orphans: 2;
                 widows: 2;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>🚨 Alarm Report - {{ date_str }} - {{ product }} - {{ environment_upper }}</h1>
 
-        <div class="summary">
-            <strong>Summary:</strong>
-            {% if total_alarms == 0 %}
-                No alarm messages found for {{ date_str }}
-            {% else %}
-                Found <strong>{{ total_alarms }}</strong> alarm messages
-                {% if ignored_messages and ignored_messages|length > 0 %}
-                    and ignored <strong>{{ ignored_messages|length }}</strong> messages
+        <div class="statistics-box">
+            <div class="stat-row">
+                <div class="stat-card total" style="width: {% if oncall_total > 0 %}20%{% else %}33.33%{% endif %};">
+                    <div class="stat-label">Total Alarms Found</div>
+                    <div class="stat-value">{{ total_alarms }}</div>
+                    <div class="stat-description">All messages parsed</div>
+                </div>
+                <div class="stat-card ignored" style="width: {% if oncall_total > 0 %}20%{% else %}33.33%{% endif %};">
+                    <div class="stat-label">Alarms Ignored</div>
+                    <div class="stat-value">{{ ignored_count }}</div>
+                    <div class="stat-description">Filtered by rules</div>
+                </div>
+                <div class="stat-card analyzed" style="width: {% if oncall_total > 0 %}20%{% else %}33.33%{% endif %};">
+                    <div class="stat-label">Alarms Analyzable</div>
+                    <div class="stat-value">{{ analyzable_alarms }}</div>
+                    <div class="stat-description">Total - Ignored</div>
+                </div>
+                {% if oncall_total > 0 %}
+                <div class="stat-card" style="border-color: #ff6b6b; border-width: 1.5pt; width: 20%;">
+                    <div class="stat-label">Total OnCall</div>
+                    <div class="stat-value" style="color: #ff6b6b;">{{ oncall_total }}</div>
+                    <div class="stat-description">Urgent alarms</div>
+                </div>
+                <div class="stat-card" style="border-color: #ee5a24; border-width: 1.5pt; width: 20%;">
+                    <div class="stat-label">OnCall Reperibilità</div>
+                    <div class="stat-value" style="color: #ee5a24;">{{ oncall_in_reperibilita }}</div>
+                    <div class="stat-description">Outside 9-18 Italy</div>
+                </div>
                 {% endif %}
-            {% endif %}
+            </div>
         </div>
 
-        {% if total_alarms > 0 %}
-            <h2>Alarm Statistics Summary</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Alarm Name</th>
-                        <th>Count</th>
-                        <th>Recent Occurrences</th>
-                        <th>Hourly Distribution</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for alarm_name, alarm_entries in alarm_stats_sorted %}
-                        <tr>
-                            <td class="alarm-name">{{ alarm_name }}</td>
-                            <td class="count-cell">{{ alarm_entries|length }}</td>
-                            <td class="occurrences">
-                                {% for alarm in alarm_entries %}
-                                    #{{ alarm.id }} ({{ alarm.timestamp.strftime('%d-%m %H:%M') }})
-                                    {%- if not loop.last %}<br>{% endif %}
-                                {% endfor %}
-                            </td>
-                            <td>
-                                <div class="hourly-dist">
-                                    {% for hour_info in alarm_entries | hourly_distribution %}
-                                        <div>{{ hour_info }}</div>
-                                    {% endfor %}
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        {% if analyzable_alarms > 0 %}
+        <h2>Alarm Statistics Summary</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Alarm Name</th>
+                    <th>Count</th>
+                    <th>Recent Occurrences</th>
+                    <th>Hourly Distribution</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alarm_name, alarm_entries in alarm_stats_sorted %}
+                <tr>
+                    <td class="alarm-name">{{ alarm_name }}</td>
+                    <td class="count-cell">{{ alarm_entries|length }}</td>
+                    <td class="occurrences">
+                        {% for alarm in alarm_entries %}
+                        #{{ alarm.id }} ({{ alarm.timestamp.strftime('%d-%m %H:%M') }})
+                        {%- if not loop.last %}<br>{% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <div class="hourly-dist">
+                            {% for hour_info in alarm_entries | hourly_distribution %}
+                            <div>{{ hour_info }}</div>
+                            {% endfor %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% else %}
-            <p class="no-data">No alarms to display.</p>
+        <p class="no-data">No alarms to display.</p>
         {% endif %}
 
-        {% if ignored_messages and ignored_messages|length > 0 %}
-            <h2>Ignored Messages ({{ ignored_messages|length }} total)</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Timestamp</th>
-                        <th>Reason</th>
-                        <th>Content</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for ignored in ignored_messages %}
-                        <tr>
-                            <td>{{ ignored.timestamp.strftime('%d-%m-%Y %H:%M:%S') if ignored.timestamp else 'N/A' }}</td>
-                            <td>{{ ignored.reason }}</td>
-                            <td>
-                                {% set content_parts = [] %}
-                                {% if ignored.get('text') %}
-                                    {% set _ = content_parts.append('Text: ' + ignored.text[:100] + ('...' if ignored.text|length > 100 else '')) %}
-                                {% endif %}
-                                {% if ignored.get('title') %}
-                                    {% set _ = content_parts.append('Title: ' + ignored.title[:100] + ('...' if ignored.title|length > 100 else '')) %}
-                                {% endif %}
-                                {% if ignored.get('fallback') %}
-                                    {% set _ = content_parts.append('Fallback: ' + ignored.fallback[:100] + ('...' if ignored.fallback|length > 100 else '')) %}
-                                {% endif %}
-                                {% if ignored.get('file_name') %}
-                                    {% set _ = content_parts.append('File: ' + ignored.file_name) %}
-                                {% endif %}
-                                {% if ignored.get('file_text') %}
-                                    {% set _ = content_parts.append('File content: ' + ignored.file_text) %}
-                                {% endif %}
-
-                                {% if content_parts %}
-                                    {{ content_parts | join('<br>') | safe }}
-                                {% else %}
-                                    No content available
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        {% if ignored_stats_sorted and ignored_stats_sorted|length > 0 %}
+        <h2>Ignored Alarms ({{ ignored_count }} total)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style='width: 45%;'>Alarm Name</th>
+                    <th style='width: 10%; text-align: center;'>Count</th>
+                    <th style='width: 45%;'>Recent Occurrences</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alarm_name, alarm_data in ignored_stats_sorted %}
+                <tr>
+                    <td>
+                        <div class="alarm-name">{{ alarm_name }}</div>
+                        <div
+                            style="font-size: 7pt; color: #666; margin-top: 3pt; font-style: italic; line-height: 1.2;">
+                            {{ alarm_data.reason }}
+                        </div>
+                        {% if alarm_data.validity %}
+                        <div style="font-size: 6pt; color: #888; margin-top: 2pt; line-height: 1.2;">
+                            <strong>Validity:</strong>
+                            {% for line in alarm_data.validity | format_time_constraint %}
+                            <div style="margin-left: 8pt;">{{ line }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {% if alarm_data.exclusions %}
+                        <div style="font-size: 6pt; color: #888; margin-top: 2pt; line-height: 1.2;">
+                            <strong>Exclusions:</strong>
+                            {% for line in alarm_data.exclusions | format_time_constraint %}
+                            <div style="margin-left: 8pt;">{{ line }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="count-cell">{{ alarm_data.count }}</td>
+                    <td class="occurrences">
+                        {% for occurrence in alarm_data.occurrences %}
+                        #{{ occurrence.id }} ({{ occurrence.timestamp.strftime('%d-%m %H:%M') if occurrence.timestamp
+                        else 'N/A' }})
+                        {%- if not loop.last %}<br>{% endif %}
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% endif %}
     </div>
 </body>
+
 </html>

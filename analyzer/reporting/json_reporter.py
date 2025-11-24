@@ -12,6 +12,23 @@ from ..duration_params import DurationParams
 from .reporter import Reporter
 
 
+def group_ignored_messages_by_name(ignored_messages: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Group ignored messages by alarm name and aggregate information."""
+    from collections import defaultdict
+    grouped = defaultdict(lambda: {'count': 0, 'reason': '', 'occurrences': []})
+
+    for ignored in ignored_messages:
+        alarm_name = ignored.get('name', 'Unknown')
+        grouped[alarm_name]['count'] += 1
+        grouped[alarm_name]['reason'] = ignored.get('reason', 'No reason provided')
+        grouped[alarm_name]['occurrences'].append({
+            'id': ignored.get('id', 'N/A'),
+            'timestamp': ignored.get('timestamp')
+        })
+
+    return dict(grouped)
+
+
 class JsonReporter:
     """JSON report generator that exports alarm data to JSON format."""
 
@@ -22,29 +39,36 @@ class JsonReporter:
     def generate_report(
         self,
         alarm_stats: Dict[str, Any],
+        analyzable_alarms: int,
         total_alarms: int,
         analyzer_params: AnalyzerParams,
-        ignored_messages: List[Dict[str, Any]]
+        ignored_messages: List[Dict[str, Any]],
+        oncall_total: int = 0,
+        oncall_in_reperibilita: int = 0
     ) -> str:
         """
         Generate comprehensive JSON report with all alarm data.
 
         Args:
             alarm_stats: Dictionary containing alarm statistics
-            total_alarms: Total number of alarm messages
+            analyzable_alarms: Number of analyzable alarm messages (excludes ignored)
+            total_alarms: Total number of alarm messages found (includes ignored)
             analyzer_params: Analysis parameters containing configuration
             ignored_messages: List of messages that were ignored
 
         Returns:
             str: Path to the generated JSON file
         """
+        # Group ignored messages by name
+        ignored_grouped = group_ignored_messages_by_name(ignored_messages) if ignored_messages else {}
+
         # Build comprehensive JSON structure
         report_data = {
-            "metadata": self._generate_metadata(analyzer_params, total_alarms, ignored_messages),
-            "summary": self._generate_summary_statistics(alarm_stats, total_alarms, ignored_messages, analyzer_params),
+            "metadata": self._generate_metadata(analyzer_params, analyzable_alarms, total_alarms, ignored_messages),
+            "summary": self._generate_summary_statistics(alarm_stats, analyzable_alarms, total_alarms, ignored_messages, analyzer_params),
             "alarm_statistics": self._generate_alarm_statistics(alarm_stats),
             "hourly_analysis": self._generate_hourly_analysis(alarm_stats),
-            "ignored_messages": self._generate_ignored_messages_data(ignored_messages),
+            "ignored_alarms": self._generate_ignored_alarms_data(ignored_grouped),
             "raw_data": self._generate_raw_data(alarm_stats, ignored_messages)
         }
 
@@ -58,6 +82,7 @@ class JsonReporter:
     def _generate_metadata(
         self,
         analyzer_params: AnalyzerParams,
+        analyzable_alarms: int,
         total_alarms: int,
         ignored_messages: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
@@ -68,7 +93,8 @@ class JsonReporter:
             "product": analyzer_params.product,
             "environment": analyzer_params.environment,
             "total_alarms": total_alarms,
-            "total_ignored_messages": len(ignored_messages) if ignored_messages else 0,
+            "analyzable_alarms": analyzable_alarms,
+            "ignored_alarms": len(ignored_messages) if ignored_messages else 0,
             "report_version": "1.0",
             "generator": "QAOps Slack Alarm Analyzer - JsonReporter"
         }
@@ -76,6 +102,7 @@ class JsonReporter:
     def _generate_summary_statistics(
         self,
         alarm_stats: Dict[str, Any],
+        analyzable_alarms: int,
         total_alarms: int,
         ignored_messages: List[Dict[str, Any]],
         analyzer_params: AnalyzerParams
@@ -85,7 +112,8 @@ class JsonReporter:
             return {
                 "unique_alarm_types": 0,
                 "total_alarms": total_alarms,
-                "ignored_messages": len(ignored_messages) if ignored_messages else 0,
+                "analyzable_alarms": analyzable_alarms,
+                "ignored_alarms": len(ignored_messages) if ignored_messages else 0,
                 "most_frequent_alarm": None,
                 "least_frequent_alarm": None,
                 "average_alarms_per_type": 0,
@@ -107,7 +135,7 @@ class JsonReporter:
             "count": len(sorted_alarms[-1][1])
         } if sorted_alarms else None
 
-        avg_alarms_per_type = total_alarms / unique_alarms if unique_alarms > 0 else 0
+        avg_alarms_per_type = analyzable_alarms / unique_alarms if unique_alarms > 0 else 0
 
         # Calculate hourly statistics
         all_timestamps = []
@@ -130,7 +158,8 @@ class JsonReporter:
         return {
             "unique_alarm_types": unique_alarms,
             "total_alarms": total_alarms,
-            "ignored_messages": len(ignored_messages) if ignored_messages else 0,
+            "analyzable_alarms": analyzable_alarms,
+            "ignored_alarms": len(ignored_messages) if ignored_messages else 0,
             "most_frequent_alarm": most_frequent_alarm,
             "least_frequent_alarm": least_frequent_alarm,
             "average_alarms_per_type": round(avg_alarms_per_type, 2),
@@ -246,37 +275,39 @@ class JsonReporter:
             "average_per_hour": round(average_count, 2)
         }
 
-    def _generate_ignored_messages_data(self, ignored_messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Generate ignored messages section."""
-        if not ignored_messages:
+    def _generate_ignored_alarms_data(self, ignored_grouped: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate ignored alarms section grouped by alarm name."""
+        if not ignored_grouped:
             return []
 
         ignored_data = []
-        for ignored in ignored_messages:
-            # Categorize message type
-            message_type = "unknown"
-            if ignored.get('file_name'):
-                message_type = "file_attachment"
-            elif ignored.get('text'):
-                message_type = "text_message"
-            elif ignored.get('title'):
-                message_type = "titled_message"
+        # Sort by count (descending)
+        sorted_ignored = sorted(ignored_grouped.items(), key=lambda x: x[1]['count'], reverse=True)
+
+        for alarm_name, alarm_data in sorted_ignored:
+            occurrences = alarm_data['occurrences']
+            timestamps = [occ['timestamp'] for occ in occurrences if occ.get('timestamp')]
+
+            # Calculate timing statistics
+            first_occurrence = min(timestamps) if timestamps else None
+            last_occurrence = max(timestamps) if timestamps else None
+
+            # Format occurrences for JSON
+            formatted_occurrences = []
+            for occ in occurrences:
+                formatted_occurrences.append({
+                    'id': occ['id'],
+                    'timestamp': occ['timestamp'],
+                    'formatted_time': occ['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if occ.get('timestamp') else None
+                })
 
             ignored_item = {
-                "timestamp": ignored.get('timestamp'),
-                "reason": ignored.get('reason', 'No reason provided'),
-                "message_type": message_type,
-                "content": {
-                    "text": ignored.get('text'),
-                    "title": ignored.get('title'),
-                    "fallback": ignored.get('fallback'),
-                    "file_name": ignored.get('file_name'),
-                    "file_text": ignored.get('file_text')
-                },
-                "content_length": {
-                    "text": len(ignored.get('text', '')),
-                    "file_text": len(ignored.get('file_text', ''))
-                }
+                "alarm_name": alarm_name,
+                "count": alarm_data['count'],
+                "reason": alarm_data['reason'],
+                "first_occurrence": first_occurrence,
+                "last_occurrence": last_occurrence,
+                "occurrences": formatted_occurrences
             }
 
             ignored_data.append(ignored_item)

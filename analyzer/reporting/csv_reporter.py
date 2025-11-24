@@ -12,6 +12,23 @@ from ..duration_params import DurationParams
 from .reporter import Reporter
 
 
+def group_ignored_messages_by_name(ignored_messages: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Group ignored messages by alarm name and aggregate information."""
+    from collections import defaultdict
+    grouped = defaultdict(lambda: {'count': 0, 'reason': '', 'occurrences': []})
+
+    for ignored in ignored_messages:
+        alarm_name = ignored.get('name', 'Unknown')
+        grouped[alarm_name]['count'] += 1
+        grouped[alarm_name]['reason'] = ignored.get('reason', 'No reason provided')
+        grouped[alarm_name]['occurrences'].append({
+            'id': ignored.get('id', 'N/A'),
+            'timestamp': ignored.get('timestamp')
+        })
+
+    return dict(grouped)
+
+
 class CsvReporter:
     """CSV report generator that exports alarm data to CSV format."""
 
@@ -22,16 +39,20 @@ class CsvReporter:
     def generate_report(
         self,
         alarm_stats: Dict[str, Any],
+        analyzable_alarms: int,
         total_alarms: int,
         analyzer_params: AnalyzerParams,
-        ignored_messages: List[Dict[str, Any]]
+        ignored_messages: List[Dict[str, Any]],
+        oncall_total: int = 0,
+        oncall_in_reperibilita: int = 0
     ) -> str:
         """
         Generate CSV reports for alarm statistics and ignored messages.
 
         Args:
             alarm_stats: Dictionary containing alarm statistics
-            total_alarms: Total number of alarm messages
+            analyzable_alarms: Number of analyzed alarm messages (excludes ignored)
+            total_alarms: Total number of alarm messages found (includes ignored)
             analyzer_params: Analysis parameters containing configuration
             ignored_messages: List of messages that were ignored
 
@@ -43,11 +64,12 @@ class CsvReporter:
 
         # Generate ignored messages CSV if there are any
         if ignored_messages:
-            ignored_csv_path = self._generate_ignored_messages_csv(ignored_messages, analyzer_params)
-            print(f"Ignored messages CSV generated at: {ignored_csv_path}")
+            ignored_grouped = group_ignored_messages_by_name(ignored_messages)
+            ignored_csv_path = self._generate_ignored_messages_csv(ignored_grouped, analyzer_params)
+            print(f"Ignored alarms CSV generated at: {ignored_csv_path}")
 
         # Generate summary CSV with overall statistics
-        summary_csv_path = self._generate_summary_csv(alarm_stats, total_alarms, ignored_messages, analyzer_params)
+        summary_csv_path = self._generate_summary_csv(alarm_stats, analyzable_alarms, total_alarms, ignored_messages, analyzer_params)
         print(f"Summary CSV generated at: {summary_csv_path}")
 
         return alarm_csv_path
@@ -121,53 +143,50 @@ class CsvReporter:
 
     def _generate_ignored_messages_csv(
         self,
-        ignored_messages: List[Dict[str, Any]],
+        ignored_grouped: Dict[str, Dict[str, Any]],
         analyzer_params: AnalyzerParams
     ) -> str:
-        """Generate CSV file with ignored messages details."""
-        csv_path = self._get_csv_filepath(analyzer_params, "ignored_messages")
+        """Generate CSV file with grouped ignored alarms details."""
+        csv_path = self._get_csv_filepath(analyzer_params, "ignored_alarms")
 
         with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
             fieldnames = [
-                'timestamp',
+                'alarm_name',
+                'count',
                 'reason',
-                'message_type',
-                'text_content',
-                'title',
-                'fallback',
-                'file_name',
-                'file_text_preview'
+                'first_occurrence',
+                'last_occurrence',
+                'alarm_ids',
+                'timestamps'
             ]
 
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
 
-            for ignored in ignored_messages:
-                # Extract content safely
-                timestamp_str = ignored['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if ignored.get('timestamp') else 'N/A'
+            # Sort by count (descending)
+            sorted_ignored = sorted(ignored_grouped.items(), key=lambda x: x[1]['count'], reverse=True)
 
-                # Determine message type based on available fields
-                message_type = 'Unknown'
-                if ignored.get('file_name'):
-                    message_type = 'File Attachment'
-                elif ignored.get('text'):
-                    message_type = 'Text Message'
-                elif ignored.get('title'):
-                    message_type = 'Titled Message'
+            for alarm_name, alarm_data in sorted_ignored:
+                occurrences = alarm_data['occurrences']
+                timestamps = [occ['timestamp'] for occ in occurrences if occ.get('timestamp')]
+                alarm_ids = [occ['id'] for occ in occurrences]
 
-                # Truncate long text fields for CSV readability
-                text_content = (ignored.get('text', '')[:200] + '...' if len(ignored.get('text', '')) > 200 else ignored.get('text', ''))
-                file_text_preview = (ignored.get('file_text', '')[:200] + '...' if len(ignored.get('file_text', '')) > 200 else ignored.get('file_text', ''))
+                # Find first and last occurrences
+                first_occurrence = min(timestamps).strftime('%Y-%m-%d %H:%M:%S') if timestamps else 'N/A'
+                last_occurrence = max(timestamps).strftime('%Y-%m-%d %H:%M:%S') if timestamps else 'N/A'
+
+                # Create formatted lists for IDs and timestamps
+                alarm_ids_str = "; ".join(alarm_ids) if alarm_ids else 'N/A'
+                timestamps_str = "; ".join([ts.strftime('%Y-%m-%d %H:%M:%S') for ts in timestamps]) if timestamps else 'N/A'
 
                 writer.writerow({
-                    'timestamp': timestamp_str,
-                    'reason': ignored.get('reason', 'No reason provided'),
-                    'message_type': message_type,
-                    'text_content': text_content,
-                    'title': ignored.get('title', ''),
-                    'fallback': ignored.get('fallback', ''),
-                    'file_name': ignored.get('file_name', ''),
-                    'file_text_preview': file_text_preview
+                    'alarm_name': alarm_name,
+                    'count': alarm_data['count'],
+                    'reason': alarm_data['reason'],
+                    'first_occurrence': first_occurrence,
+                    'last_occurrence': last_occurrence,
+                    'alarm_ids': alarm_ids_str,
+                    'timestamps': timestamps_str
                 })
 
         return csv_path
@@ -175,6 +194,7 @@ class CsvReporter:
     def _generate_summary_csv(
         self,
         alarm_stats: Dict[str, Any],
+        analyzable_alarms: int,
         total_alarms: int,
         ignored_messages: List[Dict[str, Any]],
         analyzer_params: AnalyzerParams
@@ -204,7 +224,7 @@ class CsvReporter:
                 most_frequent_count = len(sorted_alarms[0][1]) if sorted_alarms else 0
 
                 # Calculate average alarms per type
-                avg_alarms_per_type = total_alarms / unique_alarms if unique_alarms > 0 else 0
+                avg_alarms_per_type = analyzable_alarms / unique_alarms if unique_alarms > 0 else 0
 
                 # Find peak hour across all alarms
                 all_timestamps = []
@@ -224,9 +244,10 @@ class CsvReporter:
 
             # Write summary rows
             summary_data = [
-                ('total_alarms', total_alarms, 'Total number of alarm messages'),
+                ('total_alarms', total_alarms, 'Total number of alarm messages found (including ignored)'),
+                ('analyzable_alarms', analyzable_alarms, 'Number of alarm messages analyzed (excluding ignored)'),
+                ('ignored_alarms', ignored_count, 'Number of alarm messages ignored'),
                 ('unique_alarm_types', unique_alarms, 'Number of different alarm types'),
-                ('ignored_messages', ignored_count, 'Number of ignored messages'),
                 ('most_frequent_alarm', most_frequent_alarm, 'Alarm type with highest occurrence count'),
                 ('most_frequent_count', most_frequent_count, 'Occurrence count of most frequent alarm'),
                 ('avg_alarms_per_type', f"{avg_alarms_per_type:.2f}", 'Average alarms per alarm type'),

@@ -2,10 +2,10 @@
 Ignore list configuration for filtering out unwanted alarm messages.
 """
 import re
-from typing import List, Dict, Any, Tuple
+from datetime import datetime
+from typing import List, Dict, Any, Tuple, Optional
 
 from .ignore_rule import IgnoreRule
-from typing import List
 
 # Regex pattern for extracting alarm name from SEND alarm titles
 # Format: "#45533: ALARM: \"AlarmName\" in Location"
@@ -30,26 +30,46 @@ class IgnoreRuleParser:
                 IgnoreRule("AWS Notification Message", "files.name"),
             ]
 
-    def should_ignore_message(self, message: Dict[str, Any], environment: str = None) -> bool:
+    def should_ignore_message(
+        self,
+        message: Dict[str, Any],
+        environment: str = None,
+        check_datetime: Optional[datetime] = None
+    ) -> bool:
         """
         Check if a message should be ignored based on the ignore rules.
 
         Args:
             message: Slack message dictionary
             environment: Environment name to check environment-specific rules
+            check_datetime: Datetime to check for time-based rules. If None, uses current time.
 
         Returns:
             bool: True if message should be ignored, False otherwise
         """
+        # Use current time if not provided
+        if check_datetime is None:
+            check_datetime = datetime.now()
+
         for rule in self.ignore_rules:
-            if self._rule_matches_message(rule, message, environment):
+            if self._rule_matches_message(rule, message, environment, check_datetime):
                 return True
         return False
 
-    def _rule_matches_message(self, rule: IgnoreRule, message: Dict[str, Any], environment: str = None) -> bool:
+    def _rule_matches_message(
+        self,
+        rule: IgnoreRule,
+        message: Dict[str, Any],
+        environment: str = None,
+        check_datetime: datetime = None
+    ) -> bool:
         """Check if a specific rule matches the message."""
         # Check if rule applies to this environment
         if environment and not rule.applies_to_environment(environment):
+            return False
+
+        # Check if rule is valid at the given datetime (new feature)
+        if check_datetime and not rule.is_valid_at(check_datetime):
             return False
 
         # Expand environment placeholders in pattern
@@ -150,10 +170,23 @@ class IgnoreRuleParser:
             return False
         return pattern.lower() in text.lower()
 
-    def get_ignore_reason(self, message: Dict[str, Any]) -> str:
-        """Get the reason why a message was ignored."""
+    def get_matched_rule(self, message: Dict[str, Any], environment: str = None, check_datetime: datetime = None) -> Optional[IgnoreRule]:
+        """Get the rule that matches this message, or None if no match."""
+        if check_datetime is None:
+            check_datetime = datetime.now()
+
         for rule in self.ignore_rules:
-            if self._rule_matches_message(rule, message):
+            if self._rule_matches_message(rule, message, environment, check_datetime):
+                return rule
+        return None
+
+    def get_ignore_reason(self, message: Dict[str, Any], environment: str = None, check_datetime: datetime = None) -> str:
+        """Get the reason why a message was ignored."""
+        if check_datetime is None:
+            check_datetime = datetime.now()
+
+        for rule in self.ignore_rules:
+            if self._rule_matches_message(rule, message, environment, check_datetime):
                 # Use custom reason if provided, otherwise use default pattern-based reason
                 if rule.reason:
                     return rule.reason
@@ -163,10 +196,18 @@ class IgnoreRuleParser:
                     return f"Pattern '{rule.pattern}' found in {rule.path}"
         return "Unknown reason"
 
-    def add_ignore_rule(self, pattern: str, path: str = "*", environments: List[str] = None, reason: str = None) -> None:
+    def add_ignore_rule(
+        self,
+        pattern: str,
+        path: str = "*",
+        environments: List[str] = None,
+        reason: str = None,
+        validity = None,
+        exclusions = None
+    ) -> None:
         """Add a new ignore rule."""
         if pattern:
-            rule = IgnoreRule(pattern, path, environments, reason)
+            rule = IgnoreRule(pattern, path, environments, reason, validity, exclusions)
             if rule not in self.ignore_rules:
                 self.ignore_rules.append(rule)
 

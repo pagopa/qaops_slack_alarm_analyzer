@@ -8,6 +8,8 @@ from typing import Dict, List, Optional, Any
 from .environment_config import EnvironmentConfig
 from .product_config import ProductConfig
 from .ignore_rule import IgnoreRule
+from .time_constraint import TimeConstraint
+from .oncall_config import OnCallConfiguration
 
 
 class ConfigReader:
@@ -70,20 +72,59 @@ class ConfigReader:
                     environments_list = rule_data.get('environments', [])
                     reason = rule_data.get('reason', None)
 
+                    # Parse validity constraint (unified structure)
+                    validity = None
+                    validity_data = rule_data.get('validity', {})
+                    if validity_data:
+                        try:
+                            periods = validity_data.get('periods', [])
+                            weekdays = validity_data.get('weekdays', [])
+                            hours = validity_data.get('hours', [])
+                            validity = TimeConstraint(periods=periods, weekdays=weekdays, hours=hours)
+                        except ValueError as e:
+                            print(f"Warning: Invalid validity constraint in rule '{name}': {e}")
+
+                    # Parse exclusions constraint (inverse of validity)
+                    exclusions = None
+                    exclusions_data = rule_data.get('exclusions', {})
+                    if exclusions_data:
+                        try:
+                            periods = exclusions_data.get('periods', [])
+                            weekdays = exclusions_data.get('weekdays', [])
+                            hours = exclusions_data.get('hours', [])
+                            exclusions = TimeConstraint(periods=periods, weekdays=weekdays, hours=hours)
+                        except ValueError as e:
+                            print(f"Warning: Invalid exclusions constraint in rule '{name}': {e}")
+
                     if name:  # Only create rule if name is provided
                         ignore_rule = IgnoreRule(
                             pattern=name,
                             path=path,
                             environments=environments_list,
-                            reason=reason
+                            reason=reason,
+                            validity=validity,
+                            exclusions=exclusions
                         )
                         ignore_rules.append(ignore_rule)
+
+            # Parse oncall configuration
+            oncall_config = None
+            oncall_data = alarms_data.get('oncall', {})
+            if oncall_data:
+                channel_id = oncall_data.get('channel_id', '')
+                pattern = oncall_data.get('pattern', '')
+                if channel_id and pattern:
+                    oncall_config = OnCallConfiguration(
+                        channel_id=channel_id,
+                        pattern=pattern
+                    )
 
             # Create product configuration
             self._products[product_name] = ProductConfig(
                 name=product_name,
                 environments=environments,
-                ignore_rules=ignore_rules
+                ignore_rules=ignore_rules,
+                oncall_config=oncall_config
             )
 
     def get_product_config(self, product_name: str) -> Optional[ProductConfig]:
@@ -155,6 +196,22 @@ class ConfigReader:
         if product_config:
             return product_config.get_slack_channel_id(env_name)
         return None
+
+    def get_kpi_reports_slack_channel_id(self) -> Optional[str]:
+        """
+        Get Slack channel ID for publishing KPI reports.
+
+        Returns:
+            Slack channel ID or None if not configured or empty
+        """
+        if self._config_data is None:
+            self.load_config()
+
+        kpi_reports = self._config_data.get('kpi_reports', {})
+        channel_id = kpi_reports.get('slack_channel_id', '')
+
+        # Return None if channel_id is empty or None
+        return channel_id if channel_id else None
 
     def reload_config(self) -> None:
         """Reload configuration from file (useful for runtime updates)."""

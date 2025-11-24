@@ -17,10 +17,85 @@ def get_report_filepath(params: AnalyzerParams):
     return os.path.join(reports_dir, filename)
 
 
+def format_time_constraint(constraint) -> List[str]:
+    """Format a TimeConstraint object into human-readable text lines.
+
+    Args:
+        constraint: TimeConstraint object or None
+
+    Returns:
+        List of formatted strings describing the constraint
+    """
+    if not constraint or constraint.is_empty():
+        return []
+
+    lines = []
+
+    # Format periods
+    if constraint.periods:
+        for period in constraint.periods:
+            start_str = period.start.strftime("%Y-%m-%d") if period.start else "∞"
+            end_str = period.end.strftime("%Y-%m-%d") if period.end else "∞"
+            lines.append(f"Period: {start_str} → {end_str}")
+
+    # Format weekdays
+    if constraint.weekdays:
+        weekday_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        days = [weekday_names[day] for day in sorted(constraint.weekdays)]
+        lines.append(f"Weekdays: {', '.join(days)}")
+
+    # Format hours
+    if constraint.hours:
+        hour_ranges = [str(h) for h in constraint.hours]
+        lines.append(f"Hours: {', '.join(hour_ranges)}")
+
+    return lines
+
+
+def group_ignored_messages_by_name(ignored_messages: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Group ignored messages by alarm name and aggregate information.
+
+    Returns:
+        Dict with alarm name as key and dict containing:
+            - 'count': number of occurrences
+            - 'reason': ignore reason (same for all occurrences of same alarm)
+            - 'validity': TimeConstraint for when rule is valid (or None)
+            - 'exclusions': TimeConstraint for when rule is excluded (or None)
+            - 'occurrences': list of individual occurrences with id and timestamp
+    """
+    grouped = {}
+    for ignored in ignored_messages:
+        alarm_name = ignored.get('name', 'Unknown')
+
+        if alarm_name not in grouped:
+            grouped[alarm_name] = {
+                'count': 0,
+                'reason': ignored.get('reason', 'No reason provided'),
+                'validity': ignored.get('validity'),
+                'exclusions': ignored.get('exclusions'),
+                'occurrences': []
+            }
+
+        grouped[alarm_name]['count'] += 1
+        grouped[alarm_name]['occurrences'].append({
+            'id': ignored.get('id', 'N/A'),
+            'timestamp': ignored.get('timestamp')
+        })
+
+    # Sort occurrences by timestamp (most recent first) for each alarm
+    for alarm_data in grouped.values():
+        alarm_data['occurrences'].sort(
+            key=lambda x: x['timestamp'] if x['timestamp'] else datetime.min,
+            reverse=True
+        )
+
+    return grouped
+
+
 class HtmlReporter:
     """HTML report generator using Jinja2 templates."""
 
-    def generate_report(self, alarm_stats: Dict[str, Any], total_alarms: int, analyzer_params: AnalyzerParams, ignored_messages: List[Dict[str, Any]]) -> str:
+    def generate_report(self, alarm_stats: Dict[str, Any], analyzable_alarms: int, total_alarms: int, analyzer_params: AnalyzerParams, ignored_messages: List[Dict[str, Any]], oncall_total: int = 0, oncall_in_reperibilita: int = 0) -> str:
         """Generate HTML report using Jinja2 template."""
         # Setup Jinja2 environment
         template_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -54,6 +129,7 @@ class HtmlReporter:
             return result
 
         env.filters['hourly_distribution'] = hourly_distribution_filter
+        env.filters['format_time_constraint'] = format_time_constraint
 
         # Load template
         template = env.get_template('html_report.html')
@@ -61,14 +137,23 @@ class HtmlReporter:
         # Prepare alarm stats sorted by count (descending)
         alarm_stats_sorted = sorted(alarm_stats.items(), key=lambda x: len(x[1]), reverse=True) if alarm_stats else []
 
+        # Group and sort ignored messages by name and count
+        ignored_grouped = group_ignored_messages_by_name(ignored_messages) if ignored_messages else {}
+        ignored_stats_sorted = sorted(ignored_grouped.items(), key=lambda x: x[1]['count'], reverse=True)
+
         # Render template
         html_content = template.render(
             date_str=analyzer_params.date_str,
             product=analyzer_params.product,
             environment_upper=analyzer_params.environment_upper,
             total_alarms=total_alarms,
+            analyzable_alarms=analyzable_alarms,
+            ignored_count=len(ignored_messages) if ignored_messages else 0,
             alarm_stats_sorted=alarm_stats_sorted,
-            ignored_messages=ignored_messages
+            ignored_messages=ignored_messages,
+            ignored_stats_sorted=ignored_stats_sorted,
+            oncall_total=oncall_total,
+            oncall_in_reperibilita=oncall_in_reperibilita
         )
 
         # Save to file

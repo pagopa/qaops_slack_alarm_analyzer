@@ -12,6 +12,8 @@ from analyzer.alarm_parser import analyze_alarms
 from analyzer.utils import get_evening_window
 from analyzer.config.config_reader import ConfigReader
 from analyzer.analyzer_params import AnalyzerParams
+from analyzer.alarm_type import build_alarm_types
+from analyzer.alarm_analysis_result import merge_analysis_results
 
 def parse_arguments():
     """Parse command line arguments including report formats."""
@@ -109,14 +111,74 @@ def main():
         print("Error: SLACK_TOKEN environment variable not set")
         sys.exit(1)
 
-    try:
-        oldest, latest = get_evening_window(date_str)
-    except ValueError as e:
-        print(f"Date parsing error: {e}")
+    # Build alarm types for this product/environment
+    alarm_types = build_alarm_types(product_config, product, environment)
+
+    if not alarm_types:
+        print(f"Error: No alarm types configured for product {product} environment {environment}")
         sys.exit(1)
 
-    # Create analyzer parameters
+    print(f"\n=== Alarm Analysis ===")
+    print(f"Product: {product}")
+    print(f"Environment: {environment}")
+    print(f"Date: {date_str}")
+    print(f"Alarm types to analyze: {len(alarm_types)}")
+    for at in alarm_types:
+        print(f"  - {at}")
+
+    # Analyze each alarm type separately
+    analysis_results = []
+
+    for alarm_type in alarm_types:
+        print(f"\n=== Processing {alarm_type} ===")
+
+        # Get time window for this alarm type
+        try:
+            oldest, latest = alarm_type.get_time_window(date_str)
+        except ValueError as e:
+            print(f"Date parsing error: {e}")
+            continue
+
+        print(f"Time window: {datetime.fromtimestamp(oldest).strftime('%Y-%m-%d %H:%M:%S')} to {datetime.fromtimestamp(latest).strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"Channel ID: {alarm_type.channel_id}")
+
+        # Fetch messages for this alarm type's channel and time window
+        try:
+            messages = fetch_slack_messages(alarm_type.channel_id, bot_token, oldest, latest)
+            print(f"Fetched {len(messages)} messages from channel")
+        except SlackAPIError as e:
+            print(f"Slack API error: {e}")
+            continue
+        except Exception as e:
+            print(f"Network or HTTP error: {e}")
+            continue
+
+        # Analyze alarms for this type
+        try:
+            result = analyze_alarms(messages, alarm_type, product_config)
+            analysis_results.append(result)
+        except Exception as e:
+            print(f"Analysis error: {e}")
+            continue
+
+    # Merge all results
+    if not analysis_results:
+        print("\nNo analysis results to process")
+        sys.exit(1)
+
+    merged_result = merge_analysis_results(analysis_results)
+
+    # Extract values from merged result for backward compatibility
+    alarm_stats = merged_result.alarm_stats
+    analyzable_alarms = merged_result.analyzable_alarms
+    total_alarms = merged_result.total_alarms
+    ignored_messages = merged_result.ignored_messages
+    oncall_total = merged_result.oncall_total
+    oncall_in_reperibilita = merged_result.oncall_in_reperibilita
+
+    # Create analyzer parameters for reporters (using main channel and evening window for backward compatibility)
     try:
+        oldest, latest = get_evening_window(date_str)
         analyzer_params = AnalyzerParams(
             date_str=date_str,
             product=product,
@@ -128,27 +190,18 @@ def main():
             slack_token=bot_token
         )
     except ValueError as e:
-        print(f"Parameter validation error: {e}")
+        print(f"Parameter creation error: {e}")
         sys.exit(1)
 
+    # Print statistics
     print(f"\n=== Alarm Statistics ===")
-    print("Start window: ", datetime.fromtimestamp(oldest).strftime('%Y-%m-%d %H:%M:%S'))
-    print("End window:", datetime.fromtimestamp(latest).strftime('%Y-%m-%d %H:%M:%S'))
-    print(f"Analyzing alarm for product: {product}")
-    print(f"Environment: {environment}")
-    print(f"Channel ID: {slack_channel_id}")
-
-    try:
-        messages = fetch_slack_messages(slack_channel_id, bot_token, oldest, latest)
-    except SlackAPIError as e:
-        print(f"Slack API error: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Network or HTTP error: {e}")
-        sys.exit(1)
-
-    alarm_stats, total_alarms, ignored_messages = analyze_alarms(messages, analyzer_params)
-    print(f"Total alarm messages: {total_alarms}")
+    print(f"Total alarms found:      {total_alarms}")
+    print(f"Alarms ignored:          {len(ignored_messages)}")
+    print(f"Alarms analyzable:       {analyzable_alarms}")
+    if oncall_total > 0:
+        print(f"\n=== OnCall Statistics ===")
+        print(f"Total oncall alarms:     {oncall_total}")
+        print(f"OnCall in reperibilità:  {oncall_in_reperibilita}")
 
     # Generate reports based on requested formats
     for format_name in report_formats:
@@ -163,7 +216,10 @@ def main():
 
             # Instantiate and generate report
             reporter = reporter_class()
-            report_path = reporter.generate_report(alarm_stats, total_alarms, analyzer_params, ignored_messages)
+            report_path = reporter.generate_report(
+                alarm_stats, analyzable_alarms, total_alarms, analyzer_params, ignored_messages,
+                oncall_total, oncall_in_reperibilita
+            )
             print(f"{format_name.upper()} report generated at: {report_path}")
 
         except ImportError as e:

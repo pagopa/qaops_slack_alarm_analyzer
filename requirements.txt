@@ -5,3 +5,5 @@ pytz
 PyYAML
 weasyprint
 Jinja2
+slack-sdk
+matplotlib

@@ -1,9 +1,11 @@
 import re
 from datetime import datetime
 from collections import defaultdict, Counter
-from .config import IgnoreRuleParser
+from .config import IgnoreRuleParser, is_oncall_in_reperibilita
 from .analyzer_params import AnalyzerParams
 from .slack import SlackMessageParserProvider
+from .alarm_type import AlarmType
+from .alarm_analysis_result import AlarmAnalysisResult
 
 DETAILED_TIME_HISTOGRAM = True  # Set False to disable hourly distribution
 OPENING_PATTERN = re.compile(r'#(\d+): ALARM: "([^"]+)" in (.+)')
@@ -12,93 +14,84 @@ CLOSING_PATTERN = re.compile(r'CloudWatch closed alert .*?\|#(\d+)> "ALARM:\s*"(
 def parse_slack_ts(ts_str):
     return datetime.fromtimestamp(float(ts_str))
 
-def extract_alarm_info(message):
-    """Extract alarm info for SEND mode from Slack message attachments."""
-    if not message.get('attachments') or len(message['attachments']) == 0:
-        return None
+def analyze_alarms(messages, alarm_type: AlarmType, product_config):
+    """
+    Analyze alarm messages and filter by alarm type.
 
-    attachment = message['attachments'][0]
-    title = attachment.get('title', '')
-    fallback = attachment.get('fallback', '')
+    Args:
+        messages: List of raw Slack messages
+        alarm_type: AlarmType instance defining the type of alarms to analyze
+        product_config: Product configuration for ignore rules
 
-    # Nuovo pattern per TITLE: "#45533: ALARM: \"AlarmName\" in Location"
-    title_pattern = OPENING_PATTERN
-    title_match = re.search(title_pattern, title)
-
-    if title_match:
-        alarm_id = title_match.group(1)
-        alarm_name = title_match.group(2)
-        location = title_match.group(3)
-
-        ts = message.get("ts")
-        timestamp = parse_slack_ts(ts) if ts else None
-
-        return {
-            'id': alarm_id,
-            'name': alarm_name,
-            "timestamp": timestamp,
-            'location': location,
-            'full_text': title
-        }
-    
-    return None
-
-def extract_alarm_info_interop(message):
-    """Extract alarm info for INTEROP mode from Slack message files."""
-    files = message.get('files', [])
-    if not files:
-        return None
-    
-    alarm_file = files[0]
-    alarm_name = alarm_file.get('name', '')
-    alarm_id = alarm_file.get('id', 'N/A')
-    full_text = alarm_file.get('plain_text', '')
-    
-    location_match = re.search(r'in\s+(.+)', alarm_name)
-    location = location_match.group(1).strip() if location_match else 'Unknown'
-    
-    ts = message.get('ts')
-    timestamp = parse_slack_ts(ts) if ts else None
-    
-    return {
-        'id': alarm_id,
-        'name': alarm_name,
-        'location': location,
-        'timestamp': timestamp,
-        'full_text': full_text
-    }
-
-def analyze_alarms(messages, params: AnalyzerParams):
-    """Analyze alarm messages and aggregate by alarm name."""
+    Returns:
+        AlarmAnalysisResult: Analysis results for this alarm type
+    """
     alarm_stats = defaultdict(list)
     total_alarms = 0
     ignored_messages = []
+    oncall_total = 0
+    oncall_in_reperibilita = 0
 
-    # Get ignore rules from the product configuration passed in params
-    applicable_rules = params.product_rules
+    # Get ignore rules from the product configuration
+    applicable_rules = product_config.ignore_rules if product_config else []
     ignore_rule_parser = IgnoreRuleParser(applicable_rules)
 
-    # Get the appropriate parser for this product-environment combination
+    # Get the appropriate parser for this alarm type's product-environment
+    oncall_config = product_config.oncall_config if product_config else None
     parser_provider = SlackMessageParserProvider()
-    slack_parser = parser_provider.get_parser(params.product, params.environment)
+    slack_parser = parser_provider.get_parser(alarm_type.product, alarm_type.environment, oncall_config)
 
     if not slack_parser:
-        raise ValueError(f"No parser available for product '{params.product}' environment '{params.environment}'")
+        raise ValueError(f"No parser available for product '{alarm_type.product}' environment '{alarm_type.environment}'")
 
     for message in messages:
-        # Check if message should be ignored (pass environment for context)
-        if ignore_rule_parser.should_ignore_message(message, params.environment):
-            ignored_info = create_ignored_message_info(message, ignore_rule_parser)
-            ignored_messages.append(ignored_info)
-            continue
-
+        # First, try to parse the message as an alarm
         alarm_info = slack_parser.extract_alarm_info(message)
-        if alarm_info:
-            total_alarms += 1
-            alarm_stats[alarm_info['name']].append(alarm_info)
 
-    print(f"Ignored {len(ignored_messages)} messages based on ignore patterns")
-    return alarm_stats, total_alarms, ignored_messages
+        # Only process if it's an alarm message
+        if alarm_info:
+            alarm_name = alarm_info.get('name', '')
+
+            # Filter by alarm type pattern
+            if not alarm_type.matches_alarm_name(alarm_name):
+                continue
+
+            total_alarms += 1
+
+            # Track oncall statistics (only for oncall alarm types)
+            if alarm_type.is_oncall():
+                oncall_total += 1
+                alarm_timestamp = alarm_info.get('timestamp')
+                if alarm_timestamp and is_oncall_in_reperibilita(alarm_timestamp):
+                    oncall_in_reperibilita += 1
+
+            # Check if this alarm should be ignored
+            alarm_timestamp = alarm_info.get('timestamp')
+            if ignore_rule_parser.should_ignore_message(message, alarm_type.environment, alarm_timestamp):
+                ignored_info = create_ignored_message_info(message, ignore_rule_parser, alarm_info, alarm_type.environment)
+                ignored_messages.append(ignored_info)
+            else:
+                # This alarm is analyzable
+                alarm_stats[alarm_name].append(alarm_info)
+
+    # Calculate analyzable alarms
+    analyzable_alarms = total_alarms - len(ignored_messages)
+
+    print(f"[{alarm_type}] Total: {total_alarms}, Analyzable: {analyzable_alarms}, Ignored: {len(ignored_messages)}")
+    if alarm_type.is_oncall():
+        print(f"[{alarm_type}] OnCall: {oncall_total} total, {oncall_in_reperibilita} in reperibilità")
+
+    # Return AlarmAnalysisResult
+    return AlarmAnalysisResult(
+        alarm_stats=dict(alarm_stats),
+        total_alarms=total_alarms,
+        analyzable_alarms=analyzable_alarms,
+        ignored_alarms=len(ignored_messages),
+        ignored_messages=ignored_messages,
+        oncall_total=oncall_total,
+        oncall_in_reperibilita=oncall_in_reperibilita,
+        alarm_type=alarm_type
+    )
 
 def print_hourly_distribution(timestamps):
     """Print a 24-hour distribution of timestamps."""
@@ -196,12 +189,29 @@ def parse_open_closing_pairs(messages):
 
     return openings, closings
 
-def create_ignored_message_info(message, ignore_rule_parser):
-    """Create ignored message info dictionary from a Slack message."""
+def create_ignored_message_info(message, ignore_rule_parser, alarm_info, environment=None):
+    """Create ignored message info dictionary from a Slack message.
+
+    Args:
+        message: The Slack message
+        ignore_rule_parser: Parser for ignore rules
+        alarm_info: Parsed alarm information (contains alarm name, id, etc.)
+        environment: Environment name for rule matching
+    """
+    # Use the alarm's timestamp for validity checking (not current time)
+    alarm_timestamp = alarm_info['timestamp'] if alarm_info else parse_slack_ts(message.get('ts', '0'))
+
+    # Get the matched rule to extract validity and exclusions
+    matched_rule = ignore_rule_parser.get_matched_rule(message, environment, alarm_timestamp)
+
     ignored_info = {
-        'timestamp': parse_slack_ts(message.get('ts', '0')),
+        'name': alarm_info['name'] if alarm_info else 'Unknown',
+        'id': alarm_info['id'] if alarm_info else 'N/A',
+        'timestamp': alarm_timestamp,
+        'reason': ignore_rule_parser.get_ignore_reason(message, environment, alarm_timestamp),
         'text': message.get('text', ''),
-        'reason': ignore_rule_parser.get_ignore_reason(message)
+        'validity': matched_rule.validity if matched_rule and matched_rule.validity and not matched_rule.validity.is_empty() else None,
+        'exclusions': matched_rule.exclusions if matched_rule and matched_rule.exclusions and not matched_rule.exclusions.is_empty() else None
     }
 
     # Extract additional info from attachments
