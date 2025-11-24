@@ -197,6 +197,22 @@ class ConfigReader:
             return product_config.get_slack_channel_id(env_name)
         return None
 
+    def get_kpi_reports_slack_channel_id(self) -> Optional[str]:
+        """
+        Get Slack channel ID for publishing KPI reports.
+
+        Returns:
+            Slack channel ID or None if not configured or empty
+        """
+        if self._config_data is None:
+            self.load_config()
+
+        kpi_reports = self._config_data.get('kpi_reports', {})
+        channel_id = kpi_reports.get('slack_channel_id', '')
+
+        # Return None if channel_id is empty or None
+        return channel_id if channel_id else None
+
     def reload_config(self) -> None:
         """Reload configuration from file (useful for runtime updates)."""
         self._config_data = None

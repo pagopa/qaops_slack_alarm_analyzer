@@ -15,7 +15,7 @@ from typing import Dict, Any, List
 # Suppress urllib3 warning about OpenSSL version
 warnings.filterwarnings('ignore', message='urllib3 v2 only supports OpenSSL 1.1.1+')
 
-from analyzer.slack import fetch_slack_messages, SlackAPIError
+from analyzer.slack import fetch_slack_messages, SlackAPIError, upload_file_to_slack
 from analyzer.alarm_parser import analyze_alarms
 from analyzer.utils import get_evening_window
 from analyzer.config.config_reader import ConfigReader
@@ -318,8 +318,13 @@ def main():
     # Collect KPI data
     kpi_data = collect_kpi_data(config_reader, bot_token, dates, products_to_analyze)
 
+    # Get Slack channel for publishing reports
+    reports_channel_id = config_reader.get_kpi_reports_slack_channel_id()
+
     # Generate reports
     print("\n=== Generating Reports ===")
+    generated_reports = []  # Track successfully generated reports for publishing
+
     for format_name in report_formats:
         try:
             format_config = valid_formats[format_name]
@@ -335,10 +340,60 @@ def main():
             report_path = reporter.generate_report(kpi_data, dates, date_range_str)
             print(f"{format_name.upper()} report generated at: {report_path}")
 
+            # Track generated report for publishing
+            generated_reports.append({
+                'path': report_path,
+                'format': format_name
+            })
+
         except ImportError as e:
             print(f"{format_name.upper()} report generation failed: Module not found - {e}")
         except Exception as e:
             print(f"{format_name.upper()} report generation failed: {e}")
+
+    # Publish reports to Slack if channel is configured
+    if reports_channel_id and generated_reports:
+        print(f"\n=== Publishing Reports to Slack ===")
+        print(f"Channel ID: {reports_channel_id}")
+
+        for report_info in generated_reports:
+            report_path = report_info['path']
+            format_name = report_info['format']
+
+            try:
+                # Prepare comment with report summary
+                products_list = ', '.join(sorted(products_to_analyze.keys()))
+                date_range_display = f"{dates[0]} to {dates[-1]}" if len(dates) > 1 else dates[0]
+
+                initial_comment = (
+                    f"📊 *KPI Report - {date_range_display}*\n"
+                    f"Format: {format_name.upper()}\n"
+                    f"Products: {products_list}\n"
+                    f"Period: {len(dates)} day(s)"
+                )
+
+                # Upload file to Slack
+                upload_file_to_slack(
+                    file_path=report_path,
+                    channel_id=reports_channel_id,
+                    bot_token=bot_token,
+                    initial_comment=initial_comment,
+                    title=f"KPI Report {date_range_display} ({format_name.upper()})"
+                )
+                print(f"  ✓ {format_name.upper()} report published to Slack")
+
+            except FileNotFoundError as e:
+                print(f"  ✗ Failed to publish {format_name.upper()} report: File not found - {e}")
+            except SlackAPIError as e:
+                print(f"  ✗ Failed to publish {format_name.upper()} report: Slack API error - {e}")
+            except Exception as e:
+                print(f"  ✗ Failed to publish {format_name.upper()} report: {e}")
+    elif reports_channel_id:
+        print("\n=== Slack Publishing ===")
+        print("No reports were generated successfully to publish")
+    else:
+        print("\n=== Slack Publishing ===")
+        print("Slack channel not configured - skipping report publishing")
 
 
 if __name__ == "__main__":

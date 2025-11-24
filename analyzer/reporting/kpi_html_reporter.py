@@ -41,27 +41,35 @@ class KpiHtmlReporter:
         # Load template
         template = env.get_template('kpi_report.html')
 
-        # Render template
+        # Render template (maintain config order, not alphabetical)
+        products = list(kpi_data.keys())
         html_content = template.render(
             kpi_data=kpi_data,
             dates=dates,
             date_range_str=date_range_str,
-            products=sorted(kpi_data.keys()),
+            products=products,
             now=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
 
         # Save to file
-        html_path = self._get_html_filepath(date_range_str)
+        html_path = self._get_html_filepath(date_range_str, products)
         with open(html_path, 'w', encoding='utf-8') as html_file:
             html_file.write(html_content)
 
         return html_path
 
-    def _get_html_filepath(self, date_range_str: str) -> str:
-        """Generate the HTML file path."""
+    def _get_html_filepath(self, date_range_str: str, products: List[str]) -> str:
+        """Generate the HTML file path with product names if specified."""
         reports_dir = "reports"
         os.makedirs(reports_dir, exist_ok=True)
         # Sanitize date range for filename
         safe_date_range = date_range_str.replace(':', '_')
-        filename = f"kpi_report_{safe_date_range}.html"
+
+        # Include product names in filename if not all products
+        if products:
+            products_str = '_'.join(products)
+            filename = f"kpi_report_{products_str}_{safe_date_range}.html"
+        else:
+            filename = f"kpi_report_{safe_date_range}.html"
+
         return os.path.join(reports_dir, filename)

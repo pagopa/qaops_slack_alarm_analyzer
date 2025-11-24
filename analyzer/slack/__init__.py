@@ -11,7 +11,7 @@ from .product_environment import ProductEnvironment
 from .parser_provider import SlackMessageParserProvider
 from .send_parsers import SendProdParser, SendUatParser
 from .interop_parsers import InteropProdParser, InteropTestParser
-from .slack_api import SlackAPIError, fetch_slack_messages
+from .slack_api import SlackAPIError, fetch_slack_messages, upload_file_to_slack
 
 __all__ = [
     'BaseSlackMessageParser',
@@ -22,5 +22,6 @@ __all__ = [
     'InteropProdParser',
     'InteropTestParser',
     'SlackAPIError',
-    'fetch_slack_messages'
+    'fetch_slack_messages',
+    'upload_file_to_slack'
 ]

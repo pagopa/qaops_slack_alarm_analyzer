@@ -12,8 +12,8 @@
 
         body {
             font-family: Arial, sans-serif;
-            font-size: 7pt;
-            line-height: 1.1;
+            font-size: {% if dates|length == 1 %}10pt{% else %}7pt{% endif %};
+            line-height: 1.3;
             margin: 0;
             padding: 0;
             background-color: white;
@@ -29,31 +29,75 @@
 
         h1 {
             color: #333;
-            font-size: 12pt;
-            margin: 0 0 6pt 0;
-            border-bottom: 1.5pt solid #d73527;
-            padding-bottom: 3pt;
+            font-size: {% if dates|length == 1 %}20pt{% else %}12pt{% endif %};
+            margin: 0 0 {% if dates|length == 1 %}12pt{% else %}6pt{% endif %} 0;
+            border-bottom: {% if dates|length == 1 %}2.5pt{% else %}1.5pt{% endif %} solid #d73527;
+            padding-bottom: {% if dates|length == 1 %}6pt{% else %}3pt{% endif %};
             page-break-after: avoid;
         }
 
         h2 {
             color: #444;
-            font-size: 10pt;
-            margin: 10pt 0 5pt 0;
-            border-bottom: 1pt solid #007acc;
-            padding-bottom: 2pt;
+            font-size: {% if dates|length == 1 %}14pt{% else %}10pt{% endif %};
+            margin: {% if dates|length == 1 %}13pt{% else %}10pt{% endif %} 0 {% if dates|length == 1 %}10pt{% else %}5pt{% endif %} 0;
+            border-bottom: {% if dates|length == 1 %}1.5pt{% else %}1pt{% endif %} solid #007acc;
+            padding-bottom: {% if dates|length == 1 %}4pt{% else %}2pt{% endif %};
             page-break-after: avoid;
         }
 
         .summary {
             background-color: #f8f8f8;
-            padding: 5pt;
-            margin: 5pt 0 8pt 0;
-            border-left: 2pt solid #007acc;
+            padding: {% if dates|length == 1 %}10pt{% else %}5pt{% endif %};
+            margin: {% if dates|length == 1 %}10pt{% else %}5pt{% endif %} 0 {% if dates|length == 1 %}15pt{% else %}8pt{% endif %} 0;
+            border-left: {% if dates|length == 1 %}3pt{% else %}2pt{% endif %} solid #007acc;
             page-break-inside: avoid;
-            font-size: 6pt;
+            font-size: {% if dates|length == 1 %}10pt{% else %}6pt{% endif %};
         }
 
+        /* Single day layout: grid of cards */
+        {% if dates|length == 1 %}
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10pt;
+            margin-top: 10pt;
+        }
+        .product-card {
+            border: 2pt solid #007acc;
+            border-radius: 5pt;
+            padding: 12pt;
+            page-break-inside: avoid;
+        }
+        .product-card h2 {
+            margin-top: 0;
+            margin-bottom: 10pt;
+        }
+        .env-card {
+            background-color: #f9f9f9;
+            border-radius: 3pt;
+            padding: 8pt;
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4pt;
+            margin: 3pt 0;
+            border-bottom: 1pt solid #e0e0e0;
+            font-size: 11pt;
+        }
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+        .metric-label {
+            font-weight: 600;
+            color: #333;
+        }
+        .metric-value {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 13pt;
+        }
+        {% else %}
         .product-section {
             margin: 8pt 0;
             page-break-inside: avoid;
@@ -73,6 +117,7 @@
             font-size: 8pt;
             page-break-after: avoid;
         }
+        {% endif %}
 
         table {
             width: 100%;
@@ -189,16 +234,60 @@
         <h1>📊 KPI Report - {{ date_range_str }}</h1>
 
         <div class="summary">
-            <strong>Period:</strong> {{ dates[0] }} to {{ dates[-1] }} ({{ dates|length }} days) |
+            <strong>Period:</strong> {{ dates[0] }} to {{ dates[-1] }} ({{ dates|length }} day{% if dates|length > 1 %}s{% endif %}) |
             <strong>Products:</strong> {{ products|join(', ') }} |
             <strong>Generated:</strong> {{ now() }}
         </div>
 
+        {% if dates|length == 1 %}
+        <!-- Single day layout: cards grid -->
+        <div class="products-grid">
+            {% for product in products %}
+                {% for environment in kpi_data[product].keys() %}
+                <div class="product-card">
+                    <h2>{{ product }} - {{ environment|upper }}</h2>
+                    <div class="env-card">
+                        {% set date = dates[0] %}
+                        {% if kpi_data[product][environment][date] %}
+                            <div class="metric-row">
+                                <span class="metric-label">Total Alarms:</span>
+                                <span class="metric-value total">{{ kpi_data[product][environment][date]['total_alarms'] }}</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Analyzable Alarms:</span>
+                                <span class="metric-value analyzable">{{ kpi_data[product][environment][date]['analyzable_alarms'] }}</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Ignored Alarms:</span>
+                                <span class="metric-value ignored">{{ kpi_data[product][environment][date]['ignored_alarms'] }}</span>
+                            </div>
+                            {% if environment == 'prod' %}
+                            <div class="metric-row">
+                                <span class="metric-label">OnCall Alarms:</span>
+                                <span class="metric-value oncall">{{ kpi_data[product][environment][date]['oncall_total'] if kpi_data[product][environment][date]['oncall_total'] is not none else '0' }}</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">OnCall Reperibilità:</span>
+                                <span class="metric-value reperibilita">{{ kpi_data[product][environment][date]['oncall_in_reperibilita'] if kpi_data[product][environment][date]['oncall_in_reperibilita'] is not none else '0' }}</span>
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="metric-row">
+                                <span class="error">Error loading data</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Multi-day layout: tables -->
         {% for product in products %}
         <div class="product-section">
             <h2>Product: {{ product }}</h2>
 
-            {% for environment in kpi_data[product].keys()|sort %}
+            {% for environment in kpi_data[product].keys() %}
             <div class="env-table">
                 <div class="env-header">Environment: {{ environment|upper }}</div>
 
@@ -289,6 +378,7 @@
             {% endfor %}
         </div>
         {% endfor %}
+        {% endif %}
     </div>
 </body>
 </html>

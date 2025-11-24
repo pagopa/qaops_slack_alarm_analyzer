@@ -11,7 +11,7 @@
             background-color: #f9f9f9;
         }
         .container {
-            max-width: 1400px;
+            max-width: {% if dates|length == 1 %}100%{% else %}1400px{% endif %};
             margin: 0 auto;
             background-color: white;
             padding: 20px;
@@ -22,12 +22,14 @@
             color: #333;
             border-bottom: 3px solid #d73527;
             padding-bottom: 10px;
+            font-size: {% if dates|length == 1 %}32px{% else %}24px{% endif %};
         }
         h2 {
             color: #444;
             margin-top: 30px;
             border-bottom: 2px solid #007acc;
             padding-bottom: 5px;
+            font-size: {% if dates|length == 1 %}24px{% else %}20px{% endif %};
         }
         .summary {
             background-color: #f0f8ff;
@@ -35,15 +37,65 @@
             border-radius: 5px;
             margin: 20px 0;
             border-left: 4px solid #007acc;
+            font-size: {% if dates|length == 1 %}16px{% else %}14px{% endif %};
         }
         .product-section {
             margin: 30px 0;
             page-break-inside: avoid;
         }
+
+        /* Single day layout: grid of cards */
+        {% if dates|length == 1 %}
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .product-card {
+            background: white;
+            border: 2px solid #007acc;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .product-card h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .env-card {
+            background: #f9f9f9;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .env-card:last-child {
+            margin-bottom: 0;
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            background: white;
+            font-size: 16px;
+        }
+        .metric-label {
+            font-weight: 600;
+            color: #333;
+        }
+        .metric-value {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        {% else %}
         .env-table {
             margin: 20px 0;
             overflow-x: auto;
         }
+        {% endif %}
         table {
             width: 100%;
             border-collapse: collapse;
@@ -130,16 +182,60 @@
         <h1>📊 KPI Report - {{ date_range_str }}</h1>
 
         <div class="summary">
-            <strong>Period:</strong> {{ dates[0] }} to {{ dates[-1] }} ({{ dates|length }} days)<br>
+            <strong>Period:</strong> {{ dates[0] }} to {{ dates[-1] }} ({{ dates|length }} day{% if dates|length > 1 %}s{% endif %})<br>
             <strong>Products:</strong> {{ products|join(', ') }}<br>
             <strong>Generated:</strong> {{ now() }}
         </div>
 
+        {% if dates|length == 1 %}
+        <!-- Single day layout: cards grid -->
+        <div class="products-grid">
+            {% for product in products %}
+                {% for environment in kpi_data[product].keys() %}
+                <div class="product-card">
+                    <h2>{{ product }} - {{ environment|upper }}</h2>
+                    <div class="env-card">
+                        {% set date = dates[0] %}
+                        {% if kpi_data[product][environment][date] %}
+                            <div class="metric-row">
+                                <span class="metric-label">Total Alarms:</span>
+                                <span class="metric-value total">{{ kpi_data[product][environment][date]['total_alarms'] }}</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Analyzable Alarms:</span>
+                                <span class="metric-value analyzable">{{ kpi_data[product][environment][date]['analyzable_alarms'] }}</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">Ignored Alarms:</span>
+                                <span class="metric-value ignored">{{ kpi_data[product][environment][date]['ignored_alarms'] }}</span>
+                            </div>
+                            {% if environment == 'prod' %}
+                            <div class="metric-row">
+                                <span class="metric-label">OnCall Alarms:</span>
+                                <span class="metric-value oncall">{{ kpi_data[product][environment][date]['oncall_total'] if kpi_data[product][environment][date]['oncall_total'] is not none else '0' }}</span>
+                            </div>
+                            <div class="metric-row">
+                                <span class="metric-label">OnCall Reperibilità:</span>
+                                <span class="metric-value reperibilita">{{ kpi_data[product][environment][date]['oncall_in_reperibilita'] if kpi_data[product][environment][date]['oncall_in_reperibilita'] is not none else '0' }}</span>
+                            </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="metric-row">
+                                <span class="error">Error loading data</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Multi-day layout: tables -->
         {% for product in products %}
         <div class="product-section">
             <h2>Product: {{ product }}</h2>
 
-            {% for environment in kpi_data[product].keys()|sort %}
+            {% for environment in kpi_data[product].keys() %}
             <div class="env-table">
                 <div class="env-header">Environment: {{ environment|upper }}</div>
 
@@ -230,6 +326,7 @@
             {% endfor %}
         </div>
         {% endfor %}
+        {% endif %}
     </div>
 </body>
 </html>
