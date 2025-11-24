@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Dict, Any, List
 import weasyprint
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from .chart_generator import generate_charts_for_product_env
 
 
 class KpiPdfReporter:
@@ -69,12 +70,27 @@ class KpiPdfReporter:
         # Load PDF template (we'll use the same as HTML for now)
         template = env.get_template('kpi_report_pdf.html')
 
+        # Generate charts for multi-day reports (2+ days)
+        charts_data = {}
+        if len(dates) >= 2:
+            for product in kpi_data.keys():
+                charts_data[product] = {}
+                for environment in kpi_data[product].keys():
+                    charts = generate_charts_for_product_env(
+                        product,
+                        environment,
+                        dates,
+                        kpi_data[product][environment]
+                    )
+                    charts_data[product][environment] = charts
+
         # Render template (maintain config order, not alphabetical)
         html_content = template.render(
             kpi_data=kpi_data,
             dates=dates,
             date_range_str=date_range_str,
             products=list(kpi_data.keys()),
+            charts_data=charts_data,
             now=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
 

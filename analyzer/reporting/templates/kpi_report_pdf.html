@@ -374,6 +374,13 @@
                         {% endif %}
                     </tbody>
                 </table>
+
+                <!-- Chart for multi-day reports -->
+                {% if dates|length >= 2 and charts_data and charts_data.get(product) and charts_data[product].get(environment) %}
+                <div style="margin-top: 8pt; page-break-inside: avoid; width: 100%;">
+                    <img src="{{ charts_data[product][environment]['combination_chart'] }}" style="width: 100%; height: auto; display: block;" alt="Metrics Trend Chart">
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>

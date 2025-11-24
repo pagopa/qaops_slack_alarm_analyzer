@@ -2,6 +2,7 @@
 KPI HTML Report Generator for QAOps Slack Alarm Analyzer.
 """
 import os
+import json
 from datetime import datetime
 from typing import Dict, Any, List
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -41,6 +42,44 @@ class KpiHtmlReporter:
         # Load template
         template = env.get_template('kpi_report.html')
 
+        # Prepare chart data for multi-day reports (2+ days)
+        chart_data = {}
+        if len(dates) >= 2:
+            for product in kpi_data.keys():
+                chart_data[product] = {}
+                for environment in kpi_data[product].keys():
+                    # Extract data for charts
+                    total_alarms = []
+                    analyzable_alarms = []
+                    ignored_alarms = []
+                    oncall_total = []
+                    oncall_in_reperibilita = []
+
+                    for date in dates:
+                        data = kpi_data[product][environment].get(date)
+                        if data:
+                            total_alarms.append(data.get('total_alarms', 0))
+                            analyzable_alarms.append(data.get('analyzable_alarms', 0))
+                            ignored_alarms.append(data.get('ignored_alarms', 0))
+                            if environment == 'prod':
+                                oncall_total.append(data.get('oncall_total', 0) or 0)
+                                oncall_in_reperibilita.append(data.get('oncall_in_reperibilita', 0) or 0)
+                        else:
+                            total_alarms.append(0)
+                            analyzable_alarms.append(0)
+                            ignored_alarms.append(0)
+                            if environment == 'prod':
+                                oncall_total.append(0)
+                                oncall_in_reperibilita.append(0)
+
+                    chart_data[product][environment] = {
+                        'total_alarms': total_alarms,
+                        'analyzable_alarms': analyzable_alarms,
+                        'ignored_alarms': ignored_alarms,
+                        'oncall_total': oncall_total if environment == 'prod' else None,
+                        'oncall_in_reperibilita': oncall_in_reperibilita if environment == 'prod' else None
+                    }
+
         # Render template (maintain config order, not alphabetical)
         products = list(kpi_data.keys())
         html_content = template.render(
@@ -48,6 +87,7 @@ class KpiHtmlReporter:
             dates=dates,
             date_range_str=date_range_str,
             products=products,
+            chart_data_json=json.dumps(chart_data),
             now=lambda: datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
 

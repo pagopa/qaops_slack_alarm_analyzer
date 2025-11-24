@@ -322,11 +322,174 @@
                         {% endif %}
                     </tbody>
                 </table>
+
+                <!-- Chart for multi-day reports -->
+                {% if dates|length >= 2 %}
+                <div style="margin-top: 20px; page-break-inside: avoid;">
+                    <canvas id="chart-{{ product }}-{{ environment }}" style="max-height: 400px; width: 100%;"></canvas>
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% endfor %}
         {% endif %}
     </div>
+
+    <!-- Chart.js for multi-day reports -->
+    {% if dates|length >= 2 %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Chart data and configuration
+        const chartData = {{ chart_data_json | safe }};
+
+        // Format date from DD-MM-YY to Italian abbreviated weekday + day (e.g., 'mar 13')
+        function formatDateForChart(dateStr) {
+            const italianWeekdays = ['lun', 'mar', 'merc', 'giov', 'ven', 'sab', 'dom'];
+
+            try {
+                const [day, month, year] = dateStr.split('-');
+                const date = new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
+                const weekdayAbbr = italianWeekdays[date.getDay() === 0 ? 6 : date.getDay() - 1];
+                return `${weekdayAbbr} ${date.getDate()}`;
+            } catch (e) {
+                return dateStr; // Fallback to original if parsing fails
+            }
+        }
+
+        // Create combination chart for each product/environment
+        {% for product in products %}
+            {% for environment in kpi_data[product].keys() %}
+                (function() {
+                    const product = '{{ product }}';
+                    const environment = '{{ environment }}';
+                    const dates = {{ dates | tojson }};
+
+                    // Format dates for chart labels (e.g., 'mar 13')
+                    const formattedDates = dates.map(d => formatDateForChart(d));
+
+                    // Extract data for this product/environment
+                    const data = chartData[product][environment];
+
+                    // Combination chart with bars and lines
+                    const ctx = document.getElementById(`chart-${product}-${environment}`);
+                    if (ctx) {
+                        const datasets = [
+                            {
+                                label: 'Total Alarms',
+                                data: data.total_alarms,
+                                type: 'bar',
+                                backgroundColor: 'rgba(74, 144, 226, 0.6)',
+                                borderColor: '#2c5f8d',
+                                borderWidth: 1,
+                                order: 2
+                            },
+                            {
+                                label: 'Analyzable',
+                                data: data.analyzable_alarms,
+                                type: 'line',
+                                borderColor: '#28a745',
+                                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                                borderWidth: 2.5,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                tension: 0.3,
+                                order: 1
+                            },
+                            {
+                                label: 'Ignored',
+                                data: data.ignored_alarms,
+                                type: 'line',
+                                borderColor: '#ffa500',
+                                backgroundColor: 'rgba(255, 165, 0, 0.1)',
+                                borderWidth: 2.5,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                tension: 0.3,
+                                order: 1
+                            }
+                        ];
+
+                        // Add oncall metrics for prod
+                        if (environment === 'prod' && data.oncall_total) {
+                            datasets.push({
+                                label: 'OnCall Total',
+                                data: data.oncall_total,
+                                type: 'line',
+                                borderColor: '#ff6b6b',
+                                backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                                borderWidth: 2.5,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                tension: 0.3,
+                                order: 1
+                            });
+                            datasets.push({
+                                label: 'OnCall Reperibilità',
+                                data: data.oncall_in_reperibilita,
+                                type: 'line',
+                                borderColor: '#ee5a24',
+                                backgroundColor: 'rgba(238, 90, 36, 0.1)',
+                                borderWidth: 2.5,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                tension: 0.3,
+                                order: 1
+                            });
+                        }
+
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: formattedDates,
+                                datasets: datasets
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: true,
+                                layout: {
+                                    padding: {
+                                        left: 0,
+                                        right: 20
+                                    }
+                                },
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: `${product} ${environment.toUpperCase()} - Metrics Trend`,
+                                        font: { size: 14, weight: 'bold' }
+                                    },
+                                    legend: {
+                                        display: true,
+                                        position: 'top',
+                                        align: 'start'
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: {
+                                            offset: false
+                                        },
+                                        offset: false,
+                                        ticks: {
+                                            autoSkip: false,
+                                            maxRotation: 0,
+                                            minRotation: 0
+                                        }
+                                    },
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: { stepSize: 1 },
+                                        position: 'left'
+                                    }
+                                }
+                            }
+                        });
+                    }
+                })();
+            {% endfor %}
+        {% endfor %}
+    </script>
+    {% endif %}
 </body>
 </html>
