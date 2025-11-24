@@ -1,0 +1,294 @@
+# Ignore Rules - Esempi Completi con Validity/Exclusions
+
+# =============================================================================
+# ESEMPI DI VALIDITY (Quando la regola è valida)
+# =============================================================================
+
+# Esempio 1: Regola semplice senza vincoli temporali (backward compatible)
+- name: "AWS Notification Message"
+  path: "files.name"
+  reason: "Sempre ignorato - retrocompatibilità totale"
+
+# Esempio 2: Valida solo fino a una data specifica
+- name: "Temporary-Fix-Alert"
+  path: "attachments.title"
+  validity:
+    periods:
+      - end: "2025-11-06"
+  reason: "Fino al rilascio in prod del 6 novembre 2025"
+
+# Esempio 3: Valida da una data in avanti
+- name: "New-System-Alert"
+  path: "attachments.title"
+  validity:
+    periods:
+      - start: "2025-06-01"
+  reason: "Dopo il deploy del nuovo sistema (1 giugno 2025)"
+
+# Esempio 4: Valida in un periodo specifico
+- name: "Maintenance-Window"
+  path: "attachments.title"
+  validity:
+    periods:
+      - start: "2025-01-15"
+        end: "2025-01-31"
+  reason: "Durante la finestra di manutenzione di gennaio"
+
+# Esempio 5: Multipli periodi (OR logico)
+- name: "Seasonal-Alert"
+  path: "attachments.title"
+  validity:
+    periods:
+      - start: "2025-01-01"
+        end: "2025-03-31"  # Q1
+      - start: "2025-06-01"
+        end: "2025-08-31"  # Estate
+  reason: "Durante Q1 e periodo estivo"
+
+# Esempio 6: Solo durante orari specifici
+- name: "Night-Alarms"
+  path: "attachments.title.alarm_name"
+  validity:
+    hours:
+      - start: "01:00"
+        end: "05:00"
+  reason: "Allarmi che scattano ogni notte alle 3:00 UTC"
+
+# Esempio 7: Multipli orari (OR logico)
+- name: "Peak-Hours-Alert"
+  path: "attachments.title"
+  validity:
+    hours:
+      - start: "09:00"
+        end: "12:00"
+      - start: "14:00"
+        end: "17:00"
+  reason: "Durante gli orari di punta (mattina e pomeriggio)"
+
+# Esempio 8: Range orario che attraversa la mezzanotte
+- name: "Night-Shift-Alert"
+  path: "attachments.title"
+  validity:
+    hours:
+      - start: "22:00"
+        end: "06:00"
+  reason: "Durante il turno di notte (attraversa la mezzanotte)"
+
+# Esempio 9: Solo nei giorni feriali
+- name: "Weekday-Alert"
+  path: "attachments.title"
+  validity:
+    weekdays: ["monday", "tuesday", "wednesday", "thursday", "friday"]
+  reason: "Solo durante i giorni lavorativi"
+
+# Esempio 10: Solo nel weekend
+- name: "Weekend-Batch-Alert"
+  path: "attachments.title"
+  validity:
+    weekdays: ["saturday", "sunday"]
+  reason: "Batch job che girano solo nel weekend"
+
+# Esempio 11: Combinazione di criteri (AND logico)
+- name: "Business-Hours-Weekday-Alert"
+  path: "attachments.title"
+  validity:
+    weekdays: [0, 1, 2, 3, 4]  # Lun-Ven
+    hours:
+      - start: "09:00"
+        end: "18:00"
+  reason: "Solo in orario lavorativo (9-18, Lun-Ven)"
+
+# Esempio 12: Periodo stagionale con orari e giorni specifici
+- name: "Complex-Seasonal-Alert"
+  path: "attachments.title.alarm_name"
+  environments: ["prod"]
+  validity:
+    periods:
+      - start: "2025-11-01"
+        end: "2025-12-31"
+    weekdays: [0, 1, 2, 3, 4]
+    hours:
+      - start: "00:00"
+        end: "08:00"
+  reason: "Durante Nov-Dic, solo mattine dei giorni feriali"
+
+# =============================================================================
+# ESEMPI DI EXCLUSIONS (Quando la regola NON è valida)
+# =============================================================================
+
+# Esempio 13: Escludi i weekend
+- name: "No-Weekend-Alert"
+  path: "attachments.title"
+  exclusions:
+    weekdays: ["saturday", "sunday"]
+  reason: "Valido sempre tranne nel weekend"
+
+# Esempio 14: Escludi la pausa pranzo
+- name: "No-Lunch-Break-Alert"
+  path: "attachments.title"
+  exclusions:
+    hours:
+      - start: "12:00"
+        end: "14:00"
+  reason: "Valido sempre tranne durante la pausa pranzo"
+
+# Esempio 15: Escludi periodo festivo
+- name: "No-Holiday-Alert"
+  path: "attachments.title"
+  exclusions:
+    periods:
+      - start: "2025-12-24"
+        end: "2025-12-26"
+      - start: "2025-12-31"
+        end: "2025-01-01"
+  reason: "Valido sempre tranne durante le festività"
+
+# Esempio 16: Escludi orari notturni
+- name: "No-Night-Alert"
+  path: "attachments.title"
+  exclusions:
+    hours:
+      - start: "22:00"
+        end: "06:00"
+  reason: "Valido solo durante il giorno (esclusa notte)"
+
+# =============================================================================
+# COMBINARE VALIDITY E EXCLUSIONS
+# =============================================================================
+
+# Esempio 17: Orario lavorativo con pausa pranzo esclusa
+- name: "Office-Hours-No-Lunch"
+  path: "attachments.title"
+  validity:
+    weekdays: [0, 1, 2, 3, 4]
+    hours:
+      - start: "09:00"
+        end: "18:00"
+  exclusions:
+    hours:
+      - start: "12:30"
+        end: "14:00"
+  reason: "Orario ufficio (9-18, Lun-Ven) esclusa pausa pranzo (12:30-14:00)"
+
+# Esempio 18: Periodo estivo escludendo i weekend
+- name: "Summer-Weekdays-Only"
+  path: "attachments.title"
+  validity:
+    periods:
+      - start: "2025-06-01"
+        end: "2025-08-31"
+  exclusions:
+    weekdays: ["saturday", "sunday"]
+  reason: "Durante l'estate ma solo nei giorni feriali"
+
+# Esempio 19: Sempre valido tranne in periodi specifici
+- name: "Except-Maintenance-Windows"
+  path: "attachments.title"
+  exclusions:
+    periods:
+      - start: "2025-01-15 02:00:00"
+        end: "2025-01-15 04:00:00"
+      - start: "2025-03-20 02:00:00"
+        end: "2025-03-20 04:00:00"
+  reason: "Sempre valido tranne durante le finestre di manutenzione programmate"
+
+# Esempio 20: Turno giornaliero con esclusione weekend e notte
+- name: "Day-Shift-Weekdays"
+  path: "attachments.title"
+  validity:
+    hours:
+      - start: "08:00"
+        end: "20:00"
+  exclusions:
+    weekdays: ["saturday", "sunday"]
+  reason: "Turno giornaliero (8-20) solo nei giorni feriali"
+
+# =============================================================================
+# CASI D'USO REALI
+# =============================================================================
+
+# Esempio 21: Black Friday - carico alto previsto
+- name: "Black-Friday-High-Load"
+  path: "attachments.title"
+  validity:
+    periods:
+      - start: "2025-11-20"
+        end: "2025-11-30"
+    hours:
+      - start: "18:00"
+        end: "23:59"
+  reason: "Durante il Black Friday, ignora warning di carico alto nelle ore serali"
+
+# Esempio 22: Manutenzione database settimanale
+- name: "Weekly-DB-Maintenance"
+  path: "attachments.title"
+  validity:
+    weekdays: ["sunday"]
+    hours:
+      - start: "02:00"
+        end: "04:00"
+  reason: "Manutenzione database ogni domenica notte (2-4 AM)"
+
+# Esempio 23: Alert di sviluppo (solo in dev, escluso weekend)
+- name: "Dev-Environment-Alert"
+  path: "attachments.title"
+  environments: ["dev", "test"]
+  exclusions:
+    weekdays: ["saturday", "sunday"]
+  reason: "In ambienti di sviluppo, solo durante la settimana lavorativa"
+
+# Esempio 24: Periodo di migrazione con esclusioni
+- name: "Migration-Period-Alert"
+  path: "attachments.title"
+  validity:
+    periods:
+      - start: "2025-02-01"
+        end: "2025-02-28"
+  exclusions:
+    weekdays: ["saturday", "sunday"]
+    hours:
+      - start: "18:00"
+        end: "23:59"
+  reason: "Durante la migrazione di febbraio, esclusi weekend e sere (quando facciamo rilasci)"
+
+# Esempio 25: Alert con datetime preciso
+- name: "Specific-Deployment-Window"
+  path: "attachments.title"
+  validity:
+    periods:
+      - start: "2025-03-15 22:00:00"
+        end: "2025-03-16 06:00:00"
+  reason: "Finestra di deploy specifica: 15 marzo 22:00 - 16 marzo 06:00"
+
+# =============================================================================
+# NOTE SULLA LOGICA
+# =============================================================================
+
+# VALIDITY (quando applicare la regola):
+#   - Nessun campo = sempre valido
+#   - Più criteri (periods, weekdays, hours) = AND (tutti devono matchare)
+#   - Multipli valori per criterio = OR (basta uno)
+#
+#   Esempio:
+#     validity:
+#       periods: [period1, period2]  # Almeno uno dei 2 periodi
+#       weekdays: [mon, tue]         # Deve essere lunedì O martedì
+#       hours: [9-12, 14-17]         # Almeno uno dei 2 range orari
+#   La regola è valida se: (period1 OR period2) AND (mon OR tue) AND (9-12 OR 14-17)
+
+# EXCLUSIONS (quando NON applicare la regola):
+#   - Stessa logica di validity ma inversa
+#   - Se i criteri matchano, la regola NON è valida
+#
+#   Esempio:
+#     exclusions:
+#       weekdays: [sat, sun]
+#       hours: [22-06]
+#   La regola NON è valida se: (sat OR sun) AND (22-06)
+
+# COMBINAZIONE VALIDITY + EXCLUSIONS:
+#   1. Prima si controlla validity (se presente)
+#   2. Poi si controlla exclusions (se presente)
+#   3. La regola è valida se:
+#      - validity matcha (o non è specificato) AND
+#      - exclusions NON matcha (o non è specificato)
