@@ -366,10 +366,11 @@ def main():
                 date_range_display = f"{dates[0]} to {dates[-1]}" if len(dates) > 1 else dates[0]
 
                 initial_comment = (
-                    f"📊 *KPI Report - {date_range_display}*\n"
-                    f"Format: {format_name.upper()}\n"
+                    f"*KPI Report* - `{date_range_display}`\n"
                     f"Products: {products_list}\n"
-                    f"Period: {len(dates)} day(s)"
+                    f"Period: {len(dates)} day(s)\n\n"
+                    f"ℹ️ I valori presenti nel documento servono nelle KPI del foglio *Allarmi*, "
+                    f"da utilizzare per riempire i relativi valori o come strumento di verifica dei valori già inseriti."
                 )
 
                 # Upload file to Slack
