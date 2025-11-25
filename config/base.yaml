@@ -5,7 +5,7 @@
 kpi_reports:
   # Slack channel ID where KPI reports will be published
   # Leave empty or comment out to disable automatic publishing
-  slack_channel_id: "C09S6NBBBQF"
+  slack_channel_id: "C0929HBRA8M"
 
 products:
   # SEND Product Configuration
