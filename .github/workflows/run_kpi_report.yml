@@ -16,6 +16,10 @@ on:
           - SEND
           - INTEROP
           - All
+      environments:
+        description: 'Environments (comma-separated: prod,uat,test,att,catalog). Leave empty for all.'
+        required: false
+        default: ''
       report_formats:
         description: 'Report formats (comma-separated: html,pdf,csv)'
         required: false
@@ -61,10 +65,20 @@ jobs:
       - name: Build product filter
         id: product_filter
         run: |
-          if [ "${{ github.event.inputs.product }}" == "All" ]; then
+          PRODUCT="${{ github.event.inputs.product }}"
+          ENVS="${{ github.event.inputs.environments }}"
+
+          if [ "$PRODUCT" == "All" ]; then
+            # All products, all environments
             echo "filter=" >> $GITHUB_OUTPUT
+          elif [ -z "$ENVS" ]; then
+            # Specific product, all environments
+            echo "filter=product=$PRODUCT" >> $GITHUB_OUTPUT
           else
-            echo "filter=product=${{ github.event.inputs.product }}" >> $GITHUB_OUTPUT
+            # Specific product with specific environments
+            # Convert comma-separated to colon-separated
+            ENVS_FORMATTED=$(echo "$ENVS" | tr ',' ':')
+            echo "filter=product=$PRODUCT:$ENVS_FORMATTED" >> $GITHUB_OUTPUT
           fi
 
       - name: Build slack parameter
@@ -82,8 +96,22 @@ jobs:
         run: |
           python3 -m scripts.kpi_report ${{ steps.set_date.outputs.date }} ${{ steps.product_filter.outputs.filter }} report=${{ github.event.inputs.report_formats }} ${{ steps.slack_param.outputs.param }}
 
+      - name: Build artifact name
+        id: artifact_name
+        run: |
+          PRODUCT="${{ github.event.inputs.product }}"
+          ENVS="${{ github.event.inputs.environments }}"
+          DATE="${{ steps.set_date.outputs.date_safe }}"
+
+          if [ -z "$ENVS" ]; then
+            echo "name=kpi-reports-$PRODUCT-$DATE" >> $GITHUB_OUTPUT
+          else
+            ENVS_SAFE=$(echo "$ENVS" | tr ',' '-')
+            echo "name=kpi-reports-$PRODUCT-$ENVS_SAFE-$DATE" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload reports as artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: kpi-reports-${{ inputs.product }}-${{ steps.set_date.outputs.date_safe }}
+          name: ${{ steps.artifact_name.outputs.name }}
           path: reports/
