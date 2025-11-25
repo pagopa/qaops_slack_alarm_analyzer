@@ -1,0 +1,89 @@
+name: Manual KPI Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date or date range (dd-mm-yy or dd-mm-yy:dd-mm-yy). Leave empty for yesterday.'
+        required: false
+        default: ''
+      product:
+        description: 'Product to analyze (or All for all products)'
+        required: true
+        default: 'SEND'
+        type: choice
+        options:
+          - SEND
+          - INTEROP
+          - All
+      report_formats:
+        description: 'Report formats (comma-separated: html,pdf,csv)'
+        required: false
+        default: 'pdf'
+      slack:
+        description: 'Publish to Slack'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  kpi-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Set date variable
+        id: set_date
+        run: |
+          if [ -z "${{ github.event.inputs.date }}" ]; then
+            echo "date=$(date -u -d 'yesterday' +'%d-%m-%y')" >> $GITHUB_OUTPUT
+            echo "date_safe=$(date -u -d 'yesterday' +'%d-%m-%y')" >> $GITHUB_OUTPUT
+          else
+            echo "date=${{ github.event.inputs.date }}" >> $GITHUB_OUTPUT
+            echo "date_safe=$(echo '${{ github.event.inputs.date }}' | tr ':' '_')" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build product filter
+        id: product_filter
+        run: |
+          if [ "${{ github.event.inputs.product }}" == "All" ]; then
+            echo "filter=" >> $GITHUB_OUTPUT
+          else
+            echo "filter=product=${{ github.event.inputs.product }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build slack parameter
+        id: slack_param
+        run: |
+          if [ "${{ github.event.inputs.slack }}" == "true" ]; then
+            echo "param=slack=true" >> $GITHUB_OUTPUT
+          else
+            echo "param=slack=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate KPI Report
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+        run: |
+          python3 -m scripts.kpi_report ${{ steps.set_date.outputs.date }} ${{ steps.product_filter.outputs.filter }} report=${{ github.event.inputs.report_formats }} ${{ steps.slack_param.outputs.param }}
+
+      - name: Upload reports as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kpi-reports-${{ inputs.product }}-${{ steps.set_date.outputs.date_safe }}
+          path: reports/
