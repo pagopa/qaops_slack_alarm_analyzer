@@ -192,7 +192,7 @@ def parse_product_filter(products_str: str) -> Dict[str, List[str]]:
 def parse_arguments():
     """Parse command line arguments."""
     if len(sys.argv) < 2:
-        print("Usage: python kpi_report.py <date_range> [product=products] [report=formats]")
+        print("Usage: python kpi_report.py <date_range> [product=products] [report=formats] [slack=true|false]")
         print()
         print("Date range formats:")
         print("  Single date: DD-MM-YY (e.g., 19-09-25)")
@@ -200,6 +200,7 @@ def parse_arguments():
         print()
         print("Optional filters:")
         print("  product=PRODUCT:envs    Specify products with optional environments")
+        print("  slack=true|false        Enable/disable Slack publishing (default: false)")
         print()
         print("Product syntax:")
         print("  PRODUCT                 Product with all environments")
@@ -214,7 +215,7 @@ def parse_arguments():
         print("  python kpi_report.py 19-09-25:21-09-25 product=SEND:prod:uat")
         print("  python kpi_report.py 19-09-25:21-09-25 product=SEND,INTEROP")
         print("  python kpi_report.py 19-09-25:21-09-25 product=SEND:prod:uat,INTEROP:prod")
-        print("  python kpi_report.py 19-09-25:21-09-25 product=SEND:prod report=pdf")
+        print("  python kpi_report.py 19-09-25:21-09-25 product=SEND:prod report=pdf slack=true")
         print()
         print("Report formats: html, pdf, csv (default: html)")
         sys.exit(1)
@@ -231,6 +232,7 @@ def parse_arguments():
     # Parse optional parameters
     report_formats = ['html']  # Default
     products_filter = None  # None means all products, Dict[product, [envs]] otherwise
+    publish_to_slack = False  # Default: do not publish to Slack
 
     for i in range(2, len(sys.argv)):
         arg = sys.argv[i]
@@ -254,11 +256,22 @@ def parse_arguments():
                 print("Expected syntax: PRODUCT1:env1:env2,PRODUCT2:env3")
                 sys.exit(1)
 
-    return date_range_str, report_formats, valid_formats, products_filter
+        elif arg.startswith('slack='):
+            slack_str = arg.split('=', 1)[1].lower()
+            if slack_str in ['true', '1', 'yes']:
+                publish_to_slack = True
+            elif slack_str in ['false', '0', 'no']:
+                publish_to_slack = False
+            else:
+                print(f"Error: Invalid value for slack parameter: {slack_str}")
+                print("Valid values: true, false")
+                sys.exit(1)
+
+    return date_range_str, report_formats, valid_formats, products_filter, publish_to_slack
 
 
 def main():
-    date_range_str, report_formats, valid_formats, products_filter = parse_arguments()
+    date_range_str, report_formats, valid_formats, products_filter, publish_to_slack = parse_arguments()
 
     # Parse date range
     try:
@@ -351,8 +364,8 @@ def main():
         except Exception as e:
             print(f"{format_name.upper()} report generation failed: {e}")
 
-    # Publish reports to Slack if channel is configured
-    if reports_channel_id and generated_reports:
+    # Publish reports to Slack if enabled and channel is configured
+    if publish_to_slack and reports_channel_id and generated_reports:
         print(f"\n=== Publishing Reports to Slack ===")
         print(f"Channel ID: {reports_channel_id}")
 
@@ -389,12 +402,15 @@ def main():
                 print(f"  ✗ Failed to publish {format_name.upper()} report: Slack API error - {e}")
             except Exception as e:
                 print(f"  ✗ Failed to publish {format_name.upper()} report: {e}")
-    elif reports_channel_id:
+    elif publish_to_slack:
         print("\n=== Slack Publishing ===")
-        print("No reports were generated successfully to publish")
+        if not reports_channel_id:
+            print("Slack channel not configured - skipping report publishing")
+        elif not generated_reports:
+            print("No reports were generated successfully to publish")
     else:
         print("\n=== Slack Publishing ===")
-        print("Slack channel not configured - skipping report publishing")
+        print("Slack publishing disabled (use slack=true to enable)")
 
 
 if __name__ == "__main__":

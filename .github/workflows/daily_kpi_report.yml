@@ -36,11 +36,11 @@ jobs:
 
       - name: Generate KPI report for SEND
         run: |
-          python3 -m scripts.kpi_report "${{ steps.get_date.outputs.date }}" product=SEND report=pdf
+          python3 -m scripts.kpi_report "${{ steps.get_date.outputs.date }}" product=SEND report=pdf slack=true
 
       - name: Generate KPI report for INTEROP
         run: |
-          python3 -m scripts.kpi_report "${{ steps.get_date.outputs.date }}" product=INTEROP report=pdf
+          python3 -m scripts.kpi_report "${{ steps.get_date.outputs.date }}" product=INTEROP report=pdf slack=true
 
       - name: Upload reports
         uses: actions/upload-artifact@v4
