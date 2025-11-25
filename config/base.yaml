@@ -165,6 +165,10 @@ products:
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
           
+        - name: "pn-external_channel_to_paper_tracker-DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          
         # - name: "pn-external-channel-PecNamirial-multipleReceipt-alarm"
         #   path: "attachments.title.alarm_name"
         #   reason: "L'allarme non scatta in presenza di determinati termini nei log (es. Error, Fatal) ma è direttametne collegato alla metrica 'multipleReceipt' che misura la numerosità dei duplicati nelle ricevute PEC (accettazione e ricezione). L'allarme non è associato a problematiche che impattano i cittadini. Nota: In concomitanza all'attivazione di questo allarme potrebbero presentarsi diversi messaggi nella DLQ pn-ec-tracker-pec-errori-queue-DLQ.fifo e che potranno essere gestiti (rimossi) tramite lo script di automazione check_safestorage_dlq."
