@@ -178,7 +178,17 @@ products:
         # JWKS Cache Refresh Lambda Errors
         - name: "pn-jwksCacheRefreshLambda-LogInvocationErrors-Alarm"
           path: "attachments.title.alarm_name"
-          reason: "Attività periodiche eseguite dai CAF (presumibilmente reboot dei servizi) con conseguenti errori di connection refused/timeout. Mai alle ore 5.35 utc e 12.35 utc o in eventuali nuovi casi simili. Altre occorrenze individuate: 0.11 utc, 21.06 utc"
+          reason: "Attività periodiche eseguite dai CAF (presumibilmente reboot dei servizi) con conseguenti errori di connection refused/timeout. L'allarme viene SOLO negli orari specificati in validity."
+          validity:
+            hours:
+              - start: "07:35" # UTC+2
+                end: "07:37"
+              - start: "12:35" # UTC+2
+                end: "12:37"
+              - start: "02:11" # UTC+2
+                end: "02:13"
+              - start: "23:06" # UTC+2
+                end: "23:08"
 
         - name: "pn-external-channel-PecNamirial-multipleReceipt-alarm"
           path: "attachments.title.alarm_name"
