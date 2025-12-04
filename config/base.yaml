@@ -180,6 +180,10 @@ products:
           path: "attachments.title.alarm_name"
           reason: "Attività periodiche eseguite dai CAF (presumibilmente reboot dei servizi) con conseguenti errori di connection refused/timeout. Mai alle ore 5.35 utc e 12.35 utc o in eventuali nuovi casi simili. Altre occorrenze individuate: 0.11 utc, 21.06 utc"
 
+        - name: "pn-external-channel-PecNamirial-multipleReceipt-alarm"
+          path: "attachments.title.alarm_name"
+          reason: "L'allarme non scatta in presenza di determinati termini nei log (es. Error, Fatal) ma è direttametne collegato alla metrica \"multipleReceipt\" che misura la numerosità dei duplicati nelle ricevute PEC (accettazione e ricezione). L'allarme non è associato a problematiche che impattano i cittadini. Nota: In concomitanza all'attivazione di questo allarme potrebbero presentarsi diversi messaggi nella DLQ pn-ec-tracker-pec-errori-queue-DLQ.fifo e che potranno essere gestiti (rimossi) tramite lo script di automazione check_safestorage_dlq."
+
         # =====================================================================
         # ESEMPI DI IGNORE RULES
         # =====================================================================
