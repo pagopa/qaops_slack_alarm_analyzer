@@ -9,7 +9,7 @@ class SlackAPIError(Exception):
 
 def fetch_slack_messages(channel_id: str, bot_token: str, oldest: int, latest: int, limit: int = 1000):
     """
-    Fetch messages from a Slack channel within a time window.
+    Fetch messages from a Slack channel within a time window using Slack SDK.
 
     Args:
         channel_id (str): Slack channel ID.
@@ -23,32 +23,28 @@ def fetch_slack_messages(channel_id: str, bot_token: str, oldest: int, latest: i
 
     Raises:
         SlackAPIError: If Slack API returns error.
-        requests.exceptions.RequestException: For HTTP/network issues.
     """
-    url = "https://slack.com/api/conversations.history"
-    headers = {
-        "Authorization": f"Bearer {bot_token}",
-        "Content-Type": "application/json"
-    }
-    params = {
-        "channel": channel_id,
-        "oldest": oldest,
-        "latest": latest,
-        "limit": limit
-    }
+    # Create Slack client
+    client = WebClient(token=bot_token)
 
     try:
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        # Log or re-raise with context
-        raise e
+        # Use conversations_history from SDK
+        response = client.conversations_history(
+            channel=channel_id,
+            oldest=str(oldest),
+            latest=str(latest),
+            limit=limit
+        )
 
-    data = response.json()
-    if not data.get("ok", False):
-        raise SlackAPIError(f"Slack API error: {data.get('error', 'Unknown error')}")
+        if not response.get("ok", False):
+            raise SlackAPIError(f"Slack API error: {response.get('error', 'Unknown error')}")
 
-    return data.get("messages", [])
+        return response.get("messages", [])
+
+    except SdkSlackApiError as e:
+        raise SlackAPIError(f"Slack API error: {e.response['error']}")
+    except Exception as e:
+        raise SlackAPIError(f"Network or HTTP error: {str(e)}")
 
 
 def upload_file_to_slack(
