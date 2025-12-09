@@ -7,3 +7,4 @@ weasyprint
 Jinja2
 slack-sdk
 matplotlib
+brotli
