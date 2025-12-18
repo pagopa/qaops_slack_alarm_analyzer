@@ -24,6 +24,10 @@ products:
         - name: "AWS Notification Message"
           path: "files.name"
 
+        - name: "pn-Confinfo-SMS-MonthToDateSpentUSD"
+          path: "attachments.title.alarm_name"
+          reason: "Allarme a uso e consumo del gruppo Infra"
+
         - name: "pn-delivery-versioning-v1v21-sendnewnotification-lambda-LogInvocationError"
           path: "attachments.title.alarm_name"
           reason: "L'analisi dell'allarme non aggiunge nulla di rilevante rispetto all'analisi del contemporaneo pn-delivery-B2B-ApiGwAlarm"
