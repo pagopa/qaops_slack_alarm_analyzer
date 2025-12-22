@@ -31,7 +31,11 @@ products:
         - name: "pn-delivery-versioning-v1v2-getnotification-lambda-LogInvocationErrors-Alarm"
           path: "attachments.title.alarm_name"
           reason: "L'analisi dell'allarme non aggiunge nulla di rilevante rispetto all'analisi del contemporaneo pn-delivery-B2B-ApiGwAlarm"
-          
+
+        - name: "pn-delivery-versioning-v1v2-getnotification-lambda-LogInvocationErrors-Alarm"
+          path: "attachments.title.alarm_name"
+          reason: "L'analisi dell'allarme non aggiunge nulla di rilevante rispetto all'analisi del contemporaneo pn-delivery-B2B-ApiGwAlarm"
+
         - name: "pn-Confinfo-SMS-MonthToDateSpentUSD"
           path: "attachments.title.alarm_name"
           reason: "ALARM: pn-Confinfo-SMS-MonthToDateSpentUSD. L'allarme riguarda le spese mensili in sms e viene monitorato direttamente dal gruppo Infra. Thread Slack: https://pagopaspa.slack.com/archives/C087KRMD16E/p1761312793655509Connect"
@@ -42,43 +46,35 @@ products:
         
         - name: "pn-web-logout-api-ErrorAlarm"
           path: "attachments.title.alarm_name"
-          # validity:
-          #   periods:
-          #     - start: "2025-09-30"
-          #       end: "2025-11-06"
           reason: "Fino al prossimo rilascio in prod  (6 novembre 2025) Piattaforma Notifiche: GA25Q4.A - Jira"
 
         - name: "workday-SLAViolations-SendPaperAr890-Alarm"
           path: "attachments.title.alarm_name"
-          # validity:
-          #   hours:
-          #     - start: "01:00"
-          #       end: "05:00"
           reason: "Questi allarmi scattano ogni giorno alle  3.00 UTC. Si tratta di allarmi periodici ed eventuali problemi associati alle metriche che misurano vengono verificati la mattina poco prima dello SU di Send. Nello specifico bisogna assicurarsi che: il numero di SLA di validazione in Violazione sia pari a 0; il numero di SLA SendPec non superi 4; Gli altri valori possono essere ignorati"
 
         - name: "workday-SLAViolations-Refinement-Alarm"
           path: "attachments.title.alarm_name"
-          # validity:
-          #   hours:
-          #     - start: "01:00"
-          #       end: "05:00"
           reason: "Questi allarmi scattano ogni giorno alle  3.00 UTC. Si tratta di allarmi periodici ed eventuali problemi associati alle metriche che misurano vengono verificati la mattina poco prima dello SU di Send. Nello specifico bisogna assicurarsi che: il numero di SLA di validazione in Violazione sia pari a 0; il numero di SLA SendPec non superi 4; Gli altri valori possono essere ignorati"
 
         - name: "workday-SLAViolations-SendAmr-Alarm"
           path: "attachments.title.alarm_name"
-          # validity:
-          #   hours:
-          #     - start: "01:00"
-          #       end: "05:00"
           reason: "Questi allarmi scattano ogni giorno alle  3.00 UTC. Si tratta di allarmi periodici ed eventuali problemi associati alle metriche che misurano vengono verificati la mattina poco prima dello SU di Send. Nello specifico bisogna assicurarsi che: il numero di SLA di validazione in Violazione sia pari a 0; il numero di SLA SendPec non superi 4; Gli altri valori possono essere ignorati"
 
         - name: "workday-SLAViolations-SendPec-Alarm"
           path: "attachments.title.alarm_name"
-          # validity:
-          #   hours:
-          #     - start: "01:00"
-          #       end: "05:00"
           reason: "Questi allarmi scattano ogni giorno alle  3.00 UTC. Si tratta di allarmi periodici ed eventuali problemi associati alle metriche che misurano vengono verificati la mattina poco prima dello SU di Send. Nello specifico bisogna assicurarsi che: il numero di SLA di validazione in Violazione sia pari a 0; il numero di SLA SendPec non superi 4; Gli altri valori possono essere ignorati"
+
+        - name: "workday-pn-delivery_push_inputs-DLQ-HasOldMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Se ne occupa chi sta sulle code"
+
+        - name: "workday-pn-ec-tracker-pec-errori-queue-DLQ-HasOldMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Se ne occupa chi sta sulle code"
+
+        - name: "pn-deliverypush_to_externalregistries-DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Se ne occupa chi sta sulle code"
 
         # DLQ Alarms - These alarms are triggered when messages enter DLQ queues
         - name: "pn-delivery_push_actions-DLQ-HasMessage"
@@ -144,14 +140,16 @@ products:
         - name: "pn-ec-pec-scaricamento-esiti-queue-DLQ-HasMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
-          
-        - name: "pn-ec-cartaceo-batch-queue-HasOldMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
-          path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+         
+        # NON VANNO IGNORATI!
+        # Verificato il 10/12/2025
+        # - name: "pn-ec-cartaceo-batch-queue-HasOldMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
+        #   path: "attachments.title.alarm_name"
+        #   reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
 
-        - name: "pn-ec-sms-batch-queue-HasOldMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
-          path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+        # - name: "pn-ec-sms-batch-queue-HasOldMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
+        #   path: "attachments.title.alarm_name"
+        #   reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
         
         - name: "pn-ec-tracker-sms-errori-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
@@ -182,13 +180,13 @@ products:
           validity:
             hours:
               - start: "07:35" # UTC+2
-                end: "07:37"
+                end: "07:38"
               - start: "12:35" # UTC+2
-                end: "12:37"
+                end: "12:38"
               - start: "02:11" # UTC+2
-                end: "02:13"
+                end: "02:14"
               - start: "23:06" # UTC+2
-                end: "23:08"
+                end: "23:09"
 
         - name: "pn-external-channel-PecNamirial-multipleReceipt-alarm"
           path: "attachments.title.alarm_name"
@@ -288,6 +286,10 @@ products:
       ignore:
         - name: "AWS Notification Message"
           path: "files.name"
+
+        - name: "interop-safe-storage-completed-tasks-prod-message-age-prod"
+          path: "files.name"
+          reason: "Non ci sono log da analizzare, è un allarme di monitoraggio dell'età dei messaggi in coda."
 
       # OnCall alarms configuration for INTEROP
       # OnCall alarms are urgent alarms that require immediate attention
