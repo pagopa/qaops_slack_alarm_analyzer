@@ -24,6 +24,10 @@ products:
         - name: "AWS Notification Message"
           path: "files.name"
 
+        - name: "pn-simulatore-recapiti-sf-RecuperoDatiWeekly-Failed-Alarm"
+          path: "attachments.title.alarm_name"
+          reason: "Non è al momento nostra competenza analizzare questo allarme (non esiste neanche il log group). Ci faranno un KT quando sarà il momento."
+
         - name: "pn-Confinfo-SMS-MonthToDateSpentUSD"
           path: "attachments.title.alarm_name"
           reason: "Allarme a uso e consumo del gruppo Infra"
@@ -31,7 +35,7 @@ products:
         - name: "pn-delivery-versioning-v1v21-sendnewnotification-lambda-LogInvocationError"
           path: "attachments.title.alarm_name"
           reason: "L'analisi dell'allarme non aggiunge nulla di rilevante rispetto all'analisi del contemporaneo pn-delivery-B2B-ApiGwAlarm"
-                 
+
         - name: "pn-delivery-versioning-v1v2-getnotification-lambda-LogInvocationErrors-Alarm"
           path: "attachments.title.alarm_name"
           reason: "L'analisi dell'allarme non aggiunge nulla di rilevante rispetto all'analisi del contemporaneo pn-delivery-B2B-ApiGwAlarm"
@@ -43,11 +47,11 @@ products:
         - name: "pn-Confinfo-SMS-MonthToDateSpentUSD"
           path: "attachments.title.alarm_name"
           reason: "ALARM: pn-Confinfo-SMS-MonthToDateSpentUSD. L'allarme riguarda le spese mensili in sms e viene monitorato direttamente dal gruppo Infra. Thread Slack: https://pagopaspa.slack.com/archives/C087KRMD16E/p1761312793655509Connect"
-          
+
         - name: "pn-bff-WEB-payment-comp-5xx-ApiGwAlarm"
           path: "attachments.title.alarm_name"
           reason: "SEND contatto l'ente creditore per avere informazioni sul pagamento e per farlo passa anche per il downstream PagoPA: Il cittadino accede alla pagina di pagamento -> SEND invoca PagoPA -> PagoPA invoca l'ente mittente pertanto la responsabilità dei 500 è del servizio PagoPA e non di SEND"
-        
+
         - name: "pn-web-logout-api-ErrorAlarm"
           path: "attachments.title.alarm_name"
           reason: "Fino al prossimo rilascio in prod  (6 novembre 2025) Piattaforma Notifiche: GA25Q4.A - Jira"
@@ -76,11 +80,23 @@ products:
           path: "attachments.title.alarm_name"
           reason: "Se ne occupa chi sta sulle code"
 
+        - name: "workday-pn-ec-tracker-cartaceo-errori-queue-DLQ-HasOldMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Se ne occupa chi sta sulle code"
+
+        - name: "workday-pn-external_channel_to_paper_tracker-DLQ-HasOldMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Se ne occupa chi sta sulle code"
+
         - name: "pn-deliverypush_to_externalregistries-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
           reason: "Se ne occupa chi sta sulle code"
 
         # DLQ Alarms - These alarms are triggered when messages enter DLQ queues
+        - name: "pn-external_channel_outputs-DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+
         - name: "pn-delivery_push_actions-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
@@ -144,7 +160,7 @@ products:
         - name: "pn-ec-pec-scaricamento-esiti-queue-DLQ-HasMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
-         
+
         # NON VANNO IGNORATI!
         # Verificato il 10/12/2025
         # - name: "pn-ec-cartaceo-batch-queue-HasOldMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
@@ -154,7 +170,7 @@ products:
         # - name: "pn-ec-sms-batch-queue-HasOldMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
         #   path: "attachments.title.alarm_name"
         #   reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
-        
+
         - name: "pn-ec-tracker-sms-errori-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
@@ -166,11 +182,11 @@ products:
         - name: "pn-ss-transformation-sign-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
-          
+
         - name: "pn-external_channel_to_paper_tracker-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
           reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
-          
+
         # - name: "pn-external-channel-PecNamirial-multipleReceipt-alarm"
         #   path: "attachments.title.alarm_name"
         #   reason: "L'allarme non scatta in presenza di determinati termini nei log (es. Error, Fatal) ma è direttametne collegato alla metrica 'multipleReceipt' che misura la numerosità dei duplicati nelle ricevute PEC (accettazione e ricezione). L'allarme non è associato a problematiche che impattano i cittadini. Nota: In concomitanza all'attivazione di questo allarme potrebbero presentarsi diversi messaggi nella DLQ pn-ec-tracker-pec-errori-queue-DLQ.fifo e che potranno essere gestiti (rimossi) tramite lo script di automazione check_safestorage_dlq."
@@ -194,7 +210,7 @@ products:
 
         - name: "pn-external-channel-PecNamirial-multipleReceipt-alarm"
           path: "attachments.title.alarm_name"
-          reason: "L'allarme non scatta in presenza di determinati termini nei log (es. Error, Fatal) ma è direttametne collegato alla metrica \"multipleReceipt\" che misura la numerosità dei duplicati nelle ricevute PEC (accettazione e ricezione). L'allarme non è associato a problematiche che impattano i cittadini. Nota: In concomitanza all'attivazione di questo allarme potrebbero presentarsi diversi messaggi nella DLQ pn-ec-tracker-pec-errori-queue-DLQ.fifo e che potranno essere gestiti (rimossi) tramite lo script di automazione check_safestorage_dlq."
+          reason: 'L''allarme non scatta in presenza di determinati termini nei log (es. Error, Fatal) ma è direttametne collegato alla metrica "multipleReceipt" che misura la numerosità dei duplicati nelle ricevute PEC (accettazione e ricezione). L''allarme non è associato a problematiche che impattano i cittadini. Nota: In concomitanza all''attivazione di questo allarme potrebbero presentarsi diversi messaggi nella DLQ pn-ec-tracker-pec-errori-queue-DLQ.fifo e che potranno essere gestiti (rimossi) tramite lo script di automazione check_safestorage_dlq.'
 
         # =====================================================================
         # ESEMPI DI IGNORE RULES
@@ -276,7 +292,7 @@ products:
         # Production environment
         slack_channel_id: "C0472QPG5D2"
       test:
-        # Test environment 
+        # Test environment
         slack_channel_id: "C04708Y1QP5"
       att:
         # Attestazione
@@ -301,7 +317,7 @@ products:
       oncall:
         # Dedicated Slack channel ID for INTEROP oncall alarms
         # TODO: Replace with actual dedicated oncall channel ID
-        channel_id: "C05G8LFEUAF"  # Currently set to prod channel - update with dedicated oncall channel
+        channel_id: "C05G8LFEUAF" # Currently set to prod channel - update with dedicated oncall channel
         # Regex pattern to identify oncall alarms in alarm names
         # For INTEROP: alarms with "on-call" prefix (case insensitive)
         pattern: "^on-call"
