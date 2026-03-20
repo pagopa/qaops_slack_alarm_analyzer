@@ -129,13 +129,19 @@ def collect_kpi_data(
                     # Merge all results
                     merged_result = merge_analysis_results(analysis_results)
 
+                    # Build alarm breakdown (count per alarm name)
+                    alarm_breakdown = {}
+                    for alarm_name, entries in merged_result.alarm_stats.items():
+                        alarm_breakdown[alarm_name] = len(entries)
+
                     # Store KPIs
                     kpi_data[product][environment][date_str] = {
                         'total_alarms': merged_result.total_alarms,
                         'analyzable_alarms': merged_result.analyzable_alarms,
                         'ignored_alarms': merged_result.ignored_alarms,
                         'oncall_total': merged_result.oncall_total if environment == 'prod' else None,
-                        'oncall_in_reperibilita': merged_result.oncall_in_reperibilita if environment == 'prod' else None
+                        'oncall_in_reperibilita': merged_result.oncall_in_reperibilita if environment == 'prod' else None,
+                        'alarm_breakdown': alarm_breakdown
                     }
 
                     print(f"✓ (Total: {merged_result.total_alarms}, Analyzable: {merged_result.analyzable_alarms}, OnCall: {merged_result.oncall_total if environment == 'prod' else 'N/A'})")
@@ -217,7 +223,9 @@ def parse_arguments():
         print("  python kpi_report.py 19-09-25:21-09-25 product=SEND:prod:uat,INTEROP:prod")
         print("  python kpi_report.py 19-09-25:21-09-25 product=SEND:prod report=pdf slack=true")
         print()
-        print("Report formats: html, pdf, csv (default: html)")
+        print("Report formats: html, pdf, csv, breakdown_html, breakdown_pdf (default: html)")
+        print("  - html, pdf, csv: KPI summary reports")
+        print("  - breakdown_html, breakdown_pdf: Alarm occurrence breakdown by day")
         sys.exit(1)
 
     date_range_str = sys.argv[1]
@@ -226,7 +234,9 @@ def parse_arguments():
     valid_formats = {
         'html': {'class': 'KpiHtmlReporter', 'module': 'analyzer.reporting.kpi_html_reporter'},
         'pdf': {'class': 'KpiPdfReporter', 'module': 'analyzer.reporting.kpi_pdf_reporter'},
-        'csv': {'class': 'KpiCsvReporter', 'module': 'analyzer.reporting.kpi_csv_reporter'}
+        'csv': {'class': 'KpiCsvReporter', 'module': 'analyzer.reporting.kpi_csv_reporter'},
+        'breakdown_html': {'class': 'BreakdownHtmlReporter', 'module': 'analyzer.reporting.breakdown_html_reporter'},
+        'breakdown_pdf': {'class': 'BreakdownPdfReporter', 'module': 'analyzer.reporting.breakdown_pdf_reporter'}
     }
 
     # Parse optional parameters

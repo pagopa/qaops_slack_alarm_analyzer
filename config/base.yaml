@@ -24,6 +24,18 @@ products:
         - name: "AWS Notification Message"
           path: "files.name"
 
+        - name: "pn-io-notification-view-failure-Alarm"
+          path: "attachments.title.alarm_name"
+          reason: "Andrea Bertucci: con la hotfix abbiamo introdotto un allarme pn-io-notification-view-failure-Alarm al solo scopo di monitoraggio della funzionalità IO lato dev, non consideratelo. https://pagopaspa.slack.com/archives/C064KJYNLPL/p1772452822355049" 
+
+        - name: "pn-radd-SSL-Certificate-Expiration-Alarm"
+          path: "attachments.title.alarm_name"
+          reason: "L'allarme è stato creato per monitorare l'approssimarsi della scadenza del certificato SSL. L'allarme è configurato per attivarsi quando mancano 30 giorni alla scadenza del certificato, e non è associato a problemi operativi o di performance del servizio. L'allarme serve esclusivamente come promemoria per il team di gestione dei certificati, e non richiede alcuna azione da parte del team di supporto o sviluppo di Send."
+
+        - name: "pn-simulatore-recapiti-sf-GestioneSimulazione-Failed-Alarm"
+          path: "attachments.title.alarm_name"
+          reason: "Non è al momento nostra competenza analizzare questo allarme." 
+
         - name: "pn-simulatore-recapiti-sf-RecuperoDatiWeekly-Failed-Alarm"
           path: "attachments.title.alarm_name"
           reason: "Non è al momento nostra competenza analizzare questo allarme (non esiste neanche il log group). Ci faranno un KT quando sarà il momento."
@@ -95,63 +107,63 @@ products:
         # DLQ Alarms - These alarms are triggered when messages enter DLQ queues
         - name: "pn-external_channel_outputs-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-delivery_push_actions-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-delivery_push_inputs-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-ec-tracker-cartaceo-errori-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-ec-tracker-pec-errori-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-external_channel_to_paper_channel_dry_run-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-national_registry_gateway_inputs-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-ss-main-bucket-events-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-ss-staging-bucket-events-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-ss-transformation-raster-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-ss-transformation-sign-and-timemark-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-safestore_to_deliverypush-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-ec-tracker-email-errori-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-f24_internal_pdf_generator-DLQ-HasMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-national_registries_certificate_DLQ-HasMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicasemplicementemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-opensearch-low-storage"
           path: "attachments.title.alarm_name"
@@ -159,33 +171,37 @@ products:
 
         - name: "pn-ec-pec-scaricamento-esiti-queue-DLQ-HasMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
+
+        - name: "pn-ec-tracker-sercq-send-errori-queue-DLQ-HasMessage"
+          path: "attachments.title.alarm_name"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         # NON VANNO IGNORATI!
         # Verificato il 10/12/2025
         # - name: "pn-ec-cartaceo-batch-queue-HasOldMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
         #   path: "attachments.title.alarm_name"
-        #   reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+        #   reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         # - name: "pn-ec-sms-batch-queue-HasOldMessage" # NON PRESENTE NELLE'ELENCO DA IGNORARE
         #   path: "attachments.title.alarm_name"
-        #   reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+        #   reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-ec-tracker-sms-errori-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-ec-availabilitymanager-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-ss-transformation-sign-queue-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         - name: "pn-external_channel_to_paper_tracker-DLQ-HasMessage"
           path: "attachments.title.alarm_name"
-          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicamente dall'esecuzione di un dump o redrive sulla coda stessa"
+          reason: "Questi allarmi sono associati all'ingresso di messaggi in DLQ che vengono gestite quotidianamente, inoltre l'allarme potrebbe essere innescato semplicemente dall'esecuzione di un dump o redrive sulla coda stessa"
 
         # - name: "pn-external-channel-PecNamirial-multipleReceipt-alarm"
         #   path: "attachments.title.alarm_name"

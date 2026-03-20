@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alarm Breakdown Report - {{ date_range_str }}</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 1.5cm;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 9pt;
+            line-height: 1.4;
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            color: #333;
+        }
+
+        .container {
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 16pt;
+            margin: 0 0 8pt 0;
+            border-bottom: 2pt solid #d73527;
+            padding-bottom: 6pt;
+            page-break-after: avoid;
+        }
+
+        .summary {
+            background-color: #f8f8f8;
+            padding: 8pt;
+            margin: 8pt 0 12pt 0;
+            border-left: 3pt solid #007acc;
+            font-size: 8pt;
+            page-break-inside: avoid;
+        }
+
+        .product-section {
+            margin-bottom: 15pt;
+            page-break-inside: avoid;
+        }
+
+        .product-header {
+            background-color: #007acc;
+            color: white;
+            padding: 6pt 10pt;
+            font-size: 12pt;
+            font-weight: bold;
+            page-break-after: avoid;
+        }
+
+        .environment-section {
+            border: 0.5pt solid #ddd;
+            border-top: none;
+            margin-bottom: 1pt;
+        }
+
+        .environment-header {
+            background-color: #e9ecef;
+            padding: 5pt 10pt;
+            font-weight: bold;
+            color: #495057;
+            font-size: 10pt;
+            border-bottom: 0.5pt solid #ddd;
+            page-break-after: avoid;
+        }
+
+        .day-section {
+            padding: 8pt 10pt;
+            border-bottom: 0.5pt solid #eee;
+            page-break-inside: avoid;
+        }
+
+        .day-section:last-child {
+            border-bottom: none;
+        }
+
+        .day-header {
+            font-weight: bold;
+            color: #007acc;
+            margin-bottom: 6pt;
+            font-size: 10pt;
+            page-break-after: avoid;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8pt;
+            page-break-inside: auto;
+        }
+
+        th {
+            background-color: #f0f0f0;
+            text-align: left;
+            padding: 4pt 8pt;
+            border-bottom: 1pt solid #ccc;
+            font-weight: bold;
+            font-size: 8pt;
+        }
+
+        th.count-col {
+            width: 60pt;
+            text-align: center;
+        }
+
+        td {
+            padding: 3pt 8pt;
+            border-bottom: 0.5pt solid #eee;
+            font-size: 8pt;
+        }
+
+        td.count {
+            text-align: center;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        .no-data {
+            color: #6c757d;
+            font-style: italic;
+            padding: 6pt 0;
+            font-size: 8pt;
+        }
+
+        .total-row {
+            background-color: #f0f7ff;
+            font-weight: bold;
+        }
+
+        .total-row td {
+            border-top: 1pt solid #007acc;
+            padding-top: 4pt;
+        }
+
+        /* Color coding for count values */
+        .count.low { color: #28a745; }
+        .count.medium { color: #b8860b; }
+        .count.high { color: #fd7e14; }
+        .count.critical { color: #dc3545; }
+
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .product-section {
+                page-break-before: auto;
+            }
+
+            .day-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Alarm Breakdown Report - {{ date_range_str }}</h1>
+
+        <div class="summary">
+            <strong>Period:</strong> {{ dates[0] }} to {{ dates[-1] }} ({{ dates|length }} day{% if dates|length > 1 %}s{% endif %}) |
+            <strong>Products:</strong> {{ products|join(', ') }} |
+            <strong>Generated:</strong> {{ now() }}
+        </div>
+
+        {% for product in products %}
+        <div class="product-section">
+            <div class="product-header">{{ product }}</div>
+
+            {% for environment in kpi_data[product].keys() %}
+            <div class="environment-section">
+                <div class="environment-header">{{ environment|upper }}</div>
+
+                {% for date in dates %}
+                <div class="day-section">
+                    <div class="day-header">{{ date }}</div>
+
+                    {% if kpi_data[product][environment][date] and kpi_data[product][environment][date].get('alarm_breakdown') %}
+                        {% set breakdown = kpi_data[product][environment][date]['alarm_breakdown'] %}
+                        {% if breakdown %}
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Alarm Name</th>
+                                    <th class="count-col">Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set total = {'count': 0} %}
+                                {% for alarm_name, count in breakdown|dictsort(by='value', reverse=true) %}
+                                <tr>
+                                    <td>{{ alarm_name }}</td>
+                                    <td class="count {% if count <= 2 %}low{% elif count <= 5 %}medium{% elif count <= 10 %}high{% else %}critical{% endif %}">{{ count }}</td>
+                                </tr>
+                                {% set _ = total.update({'count': total.count + count}) %}
+                                {% endfor %}
+                                <tr class="total-row">
+                                    <td>Total</td>
+                                    <td class="count">{{ total.count }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p class="no-data">No alarms recorded</p>
+                        {% endif %}
+                    {% else %}
+                        <p class="no-data">No data available</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
