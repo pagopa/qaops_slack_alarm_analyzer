@@ -1,8 +1,8 @@
 name: Daily Slack alarm report
 
 on:
-  schedule:
-    - cron: "10 7 * * *"  # Every day at 9:10 Rome (summer) / 08:10 Rome (winter)
+  #schedule:
+  #  - cron: "10 7 * * *"  # Every day at 9:10 Rome (summer) / 08:10 Rome (winter)
   workflow_dispatch:     # Allow manual trigger
 
 permissions:
