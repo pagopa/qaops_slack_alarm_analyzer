@@ -4,6 +4,13 @@ from collections import defaultdict, Counter
 from .config import IgnoreRuleParser, is_oncall_in_reperibilita
 from .analyzer_params import AnalyzerParams
 from .slack import SlackMessageParserProvider
+from .slack.send_jsm_parsers import (
+    JSM_CLOSED_MARKER,
+    JSM_TITLE_PATTERN,
+    collect_message_texts,
+    find_alarm_title,
+    is_jsm_source,
+)
 from .alarm_type import AlarmType
 from .alarm_analysis_result import AlarmAnalysisResult
 
@@ -161,31 +168,39 @@ def parse_date(date_str):
         import sys; sys.exit(1)
 
 def parse_open_closing_pairs(messages):
+    """Pair JSM open/close events by alarm id.
+
+    JSM posts two Slack messages per alert lifecycle:
+      - Opening: a Block Kit card under ``attachments[0].blocks`` whose title
+        contains ``#<id>: ALARM: "<name>" in <location>``.
+      - Closing: a separate plain message that repeats the same title and adds
+        the line ``CloudWatch closed the alert``.
+    """
     openings = {}
     closings = {}
 
     for msg in messages:
-        if 'attachments' not in msg:
+        if not is_jsm_source(msg):
             continue
 
-        attachment = msg['attachments'][0]
-        fallback = attachment.get('fallback', '')
-        title = attachment.get('title', '')
+        texts = collect_message_texts(msg)
+        title_line = find_alarm_title(texts)
+        if not title_line:
+            continue
+
+        match = JSM_TITLE_PATTERN.search(title_line)
+        if not match:
+            continue
+
+        alarm_id = match.group(1)
+        alarm_name = match.group(2).strip()
         ts = float(msg.get('ts', 0))
 
-        # Aperture: dal campo "title"
-        open_match = re.search(OPENING_PATTERN, title)
-        if open_match:
-            alarm_id, alarm_name, region = open_match.groups()
-            openings[alarm_id] = (ts, alarm_name)
-            continue
-
-        # Chiusure: dal campo "fallback"
-        close_match = re.search(CLOSING_PATTERN, fallback)
-        if close_match:
-            alarm_id = close_match.group(1)
+        is_closing = any(JSM_CLOSED_MARKER in t for t in texts)
+        if is_closing:
             closings[alarm_id] = ts
-            continue
+        else:
+            openings[alarm_id] = (ts, alarm_name)
 
     return openings, closings
 

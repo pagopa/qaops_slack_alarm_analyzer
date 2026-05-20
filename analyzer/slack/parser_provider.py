@@ -5,7 +5,11 @@ from typing import Dict, Optional, TYPE_CHECKING
 
 from .base_slack_parser import BaseSlackMessageParser
 from .product_environment import ProductEnvironment
-from .send_parsers import SendProdParser, SendUatParser
+# NOTE: SendProdParser / SendUatParser parse legacy Opsgenie messages and are
+# currently disabled — SEND alarms are now delivered to Slack by Jira Service
+# Management ChatOps. The classes are kept for reference / future re-enable.
+from .send_parsers import SendProdParser, SendUatParser  # noqa: F401
+from .send_jsm_parsers import SendProdJsmParser, SendUatJsmParser
 from .interop_parsers import InteropProdParser, InteropTestParser
 
 if TYPE_CHECKING:
@@ -22,9 +26,9 @@ class SlackMessageParserProvider:
 
     def _register_default_parsers(self) -> None:
         """Register all default parsers."""
-        # SEND parsers
-        self.register_parser(SendProdParser())
-        self.register_parser(SendUatParser())
+        # SEND parsers — JSM ChatOps (Opsgenie variants are kept but disabled)
+        self.register_parser(SendProdJsmParser())
+        self.register_parser(SendUatJsmParser())
 
         # INTEROP parsers
         self.register_parser(InteropProdParser())
@@ -56,10 +60,11 @@ class SlackMessageParserProvider:
         product_upper = product.upper()
         env_lower = environment.lower()
 
-        # Map product-environment combinations to parser classes
+        # Map product-environment combinations to parser classes.
+        # SEND uses the JSM ChatOps parsers; the Opsgenie ones are disabled.
         parser_map = {
-            'SEND_prod': SendProdParser,
-            'SEND_uat': SendUatParser,
+            'SEND_prod': SendProdJsmParser,
+            'SEND_uat': SendUatJsmParser,
             'INTEROP_prod': InteropProdParser,
             'INTEROP_test': InteropTestParser,
         }

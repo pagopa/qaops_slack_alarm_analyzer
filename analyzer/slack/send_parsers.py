@@ -1,5 +1,10 @@
 """
-SEND product Slack message parsers for different environments.
+SEND product Slack message parsers for the legacy Opsgenie format.
+
+DEPRECATED / DISABLED: SEND alarms are no longer delivered to Slack by
+Opsgenie. They are now sent by Jira Service Management ChatOps — see
+``send_jsm_parsers.py`` for the active parsers. These classes are kept for
+reference and in case the integration is ever switched back.
 """
 import re
 from datetime import datetime

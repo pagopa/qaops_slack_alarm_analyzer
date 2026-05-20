@@ -10,6 +10,7 @@ from .base_slack_parser import BaseSlackMessageParser
 from .product_environment import ProductEnvironment
 from .parser_provider import SlackMessageParserProvider
 from .send_parsers import SendProdParser, SendUatParser
+from .send_jsm_parsers import SendProdJsmParser, SendUatJsmParser
 from .interop_parsers import InteropProdParser, InteropTestParser
 from .slack_api import SlackAPIError, fetch_slack_messages, upload_file_to_slack
 
@@ -19,6 +20,8 @@ __all__ = [
     'SlackMessageParserProvider',
     'SendProdParser',
     'SendUatParser',
+    'SendProdJsmParser',
+    'SendUatJsmParser',
     'InteropProdParser',
     'InteropTestParser',
     'SlackAPIError',
