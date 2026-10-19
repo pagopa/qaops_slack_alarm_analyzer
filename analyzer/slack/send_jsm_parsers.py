@@ -43,7 +43,7 @@ def _parse_slack_ts(ts_str: str) -> datetime:
     return datetime.fromtimestamp(float(ts_str))
 
 
-def _normalize_slack_text(text: str) -> str:
+def normalize_slack_text(text: str) -> str:
     text = _SLACK_LINK_RE.sub(r'\1', text)
     text = _BOLD_RE.sub(r'\1', text)
     text = _CODE_RE.sub(r'\1', text)
@@ -144,7 +144,7 @@ def is_jsm_source(message: Dict[str, Any]) -> bool:
 
 def find_alarm_title(texts: List[str]) -> Optional[str]:
     for text in texts:
-        normalized = _normalize_slack_text(text)
+        normalized = normalize_slack_text(text)
         for line in re.split(r'\n+', normalized):
             candidate = line.strip()
             if _ALARM_LINE_RE.search(candidate):
@@ -166,7 +166,7 @@ def _extract_jsm_alarm_info(
 
     # JSM posts a separate Slack message when CloudWatch closes the alert. It
     # carries the same ALARM title — skip it so it isn't counted as an opening.
-    if any(JSM_CLOSED_MARKER in _normalize_slack_text(t) for t in texts):
+    if any(JSM_CLOSED_MARKER in normalize_slack_text(t) for t in texts):
         return None
 
     match = JSM_TITLE_PATTERN.search(title_line)
@@ -180,7 +180,7 @@ def _extract_jsm_alarm_info(
     ts = message.get('ts')
     timestamp = _parse_slack_ts(ts) if ts else None
 
-    full_text = '\n'.join(_normalize_slack_text(t) for t in texts)
+    full_text = '\n'.join(normalize_slack_text(t) for t in texts)
 
     return {
         'id': alarm_id,

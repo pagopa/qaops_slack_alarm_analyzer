@@ -3,46 +3,122 @@ from pathlib import Path
 from typing import Optional
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError as SdkSlackApiError
+from slack_sdk.http_retry.builtin_handlers import RateLimitErrorRetryHandler
 
 class SlackAPIError(Exception):
     pass
 
-def fetch_slack_messages(channel_id: str, bot_token: str, oldest: int, latest: int, limit: int = 1000):
+def fetch_slack_messages(channel_id: str, bot_token: str, oldest: int, latest: int, limit: int = 200):
     """
-    Fetch messages from a Slack channel within a time window using Slack SDK.
+    Fetch all messages from a Slack channel within a time window using Slack SDK.
+
+    Results are paginated with the response cursor, so every message in the
+    window is returned regardless of how many there are.
 
     Args:
         channel_id (str): Slack channel ID.
         bot_token (str): Slack bot token.
         oldest (int): Unix timestamp for oldest message.
         latest (int): Unix timestamp for latest message.
-        limit (int): Max number of messages to fetch (default 1000).
+        limit (int): Page size for each API call (default 200, as recommended by Slack).
 
     Returns:
-        List[dict]: List of Slack messages.
+        List[dict]: List of Slack messages, newest first.
 
     Raises:
         SlackAPIError: If Slack API returns error.
     """
     # Create Slack client
     client = WebClient(token=bot_token)
+    # conversations_history is rate limited (Tier 3): retry instead of failing
+    client.retry_handlers.append(RateLimitErrorRetryHandler(max_retry_count=5))
 
+    messages = []
     try:
-        # Use conversations_history from SDK
-        response = client.conversations_history(
-            channel=channel_id,
-            oldest=str(oldest),
-            latest=str(latest),
-            limit=limit
-        )
+        cursor = None
+        while True:
+            # Use conversations_history from SDK
+            response = client.conversations_history(
+                channel=channel_id,
+                oldest=str(oldest),
+                latest=str(latest),
+                limit=limit,
+                cursor=cursor
+            )
 
-        if not response.get("ok", False):
-            raise SlackAPIError(f"Slack API error: {response.get('error', 'Unknown error')}")
+            if not response.get("ok", False):
+                raise SlackAPIError(f"Slack API error: {response.get('error', 'Unknown error')}")
 
-        return response.get("messages", [])
+            messages.extend(response.get("messages", []))
+
+            cursor = response.get("response_metadata", {}).get("next_cursor")
+            if not response.get("has_more") or not cursor:
+                break
+
+        return messages
 
     except SdkSlackApiError as e:
         raise SlackAPIError(f"Slack API error: {e.response['error']}")
+    except SlackAPIError:
+        raise
+    except Exception as e:
+        raise SlackAPIError(f"Network or HTTP error: {str(e)}")
+
+
+def fetch_thread_replies(channel_id: str, bot_token: str, messages: list):
+    """
+    Fetch the thread replies of the given channel messages using Slack SDK.
+
+    conversations_history does not return thread replies, so events posted
+    inside a thread (e.g. JSM "CloudWatch closed the alert") must be fetched
+    separately with conversations_replies.
+
+    Args:
+        channel_id (str): Slack channel ID.
+        bot_token (str): Slack bot token.
+        messages (list): Parent messages, as returned by fetch_slack_messages.
+
+    Returns:
+        List[dict]: List of reply messages (parent messages excluded).
+
+    Raises:
+        SlackAPIError: If Slack API returns error.
+    """
+    client = WebClient(token=bot_token)
+    # conversations_replies is rate limited (Tier 3): retry instead of failing
+    client.retry_handlers.append(RateLimitErrorRetryHandler(max_retry_count=5))
+
+    replies = []
+    try:
+        for msg in messages:
+            if not msg.get('reply_count'):
+                continue
+
+            parent_ts = msg['ts']
+            cursor = None
+            while True:
+                response = client.conversations_replies(
+                    channel=channel_id,
+                    ts=parent_ts,
+                    cursor=cursor,
+                    limit=200
+                )
+
+                if not response.get("ok", False):
+                    raise SlackAPIError(f"Slack API error: {response.get('error', 'Unknown error')}")
+
+                replies.extend(m for m in response.get("messages", []) if m.get('ts') != parent_ts)
+
+                cursor = response.get("response_metadata", {}).get("next_cursor")
+                if not cursor:
+                    break
+
+        return replies
+
+    except SdkSlackApiError as e:
+        raise SlackAPIError(f"Slack API error: {e.response['error']}")
+    except SlackAPIError:
+        raise
     except Exception as e:
         raise SlackAPIError(f"Network or HTTP error: {str(e)}")
 

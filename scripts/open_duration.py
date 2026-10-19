@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 # Suppress urllib3 warning about OpenSSL version
 warnings.filterwarnings('ignore', message='urllib3 v2 only supports OpenSSL 1.1.1+')
 
-from analyzer.slack import fetch_slack_messages, SlackAPIError
+from analyzer.slack import fetch_slack_messages, fetch_thread_replies, SlackAPIError
 from analyzer.utils import get_time_bounds
 from analyzer.alarm_parser import parse_open_closing_pairs
 from analyzer.duration_params import DurationParams
@@ -98,11 +98,14 @@ def main():
     try:
         messages = fetch_slack_messages(channel_id, bot_token, oldest, latest)
         print(f"Fetched {len(messages)} messages")
+        # JSM posts the closing event as a reply in the alarm thread
+        replies = fetch_thread_replies(channel_id, bot_token, messages)
+        print(f"Fetched {len(replies)} thread replies")
     except SlackAPIError as e:
         print(f"Slack API error: {e}")
         sys.exit(1)
 
-    openings, closings = parse_open_closing_pairs(messages)
+    openings, closings = parse_open_closing_pairs(messages + replies)
     print(f"openings {len(openings)} openings")
     print(f"closings {len(closings)} closings")
 

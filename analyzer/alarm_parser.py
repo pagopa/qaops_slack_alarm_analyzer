@@ -10,6 +10,7 @@ from .slack.send_jsm_parsers import (
     collect_message_texts,
     find_alarm_title,
     is_jsm_source,
+    normalize_slack_text,
 )
 from .alarm_type import AlarmType
 from .alarm_analysis_result import AlarmAnalysisResult
@@ -173,8 +174,12 @@ def parse_open_closing_pairs(messages):
     JSM posts two Slack messages per alert lifecycle:
       - Opening: a Block Kit card under ``attachments[0].blocks`` whose title
         contains ``#<id>: ALARM: "<name>" in <location>``.
-      - Closing: a separate plain message that repeats the same title and adds
-        the line ``CloudWatch closed the alert``.
+      - Closing: a thread reply to the opening card that repeats the same
+        title and adds the line ``CloudWatch closed the alert``.
+
+    ``messages`` must therefore include the thread replies (see
+    ``fetch_thread_replies``). Other replies (notes, acks, ...) repeat the
+    title too, so only top-level messages are counted as openings.
     """
     openings = {}
     closings = {}
@@ -196,10 +201,11 @@ def parse_open_closing_pairs(messages):
         alarm_name = match.group(2).strip()
         ts = float(msg.get('ts', 0))
 
-        is_closing = any(JSM_CLOSED_MARKER in t for t in texts)
+        is_closing = any(JSM_CLOSED_MARKER in normalize_slack_text(t) for t in texts)
+        is_thread_reply = msg.get('thread_ts', msg.get('ts')) != msg.get('ts')
         if is_closing:
             closings[alarm_id] = ts
-        else:
+        elif not is_thread_reply:
             openings[alarm_id] = (ts, alarm_name)
 
     return openings, closings
